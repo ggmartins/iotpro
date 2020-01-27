@@ -1,0 +1,156 @@
+service:
+  name: serverless-iotlab
+
+plugins:
+  - serverless-webpack
+  - serverless-iam-roles-per-function
+  - serverless-reqvalidator-plugin
+  - serverless-aws-documentation
+  - serverless-offline
+  - serverless-dynamodb-local
+  - serverless-s3-local #https://www.npmjs.com/package/serverless-s3-local
+
+provider:
+  name: aws
+  runtime: nodejs12
+
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, 'us-east-1'}
+
+  environment:
+    AUTH0_JWKS_URL: 'https://XXXX.auth0.com/.well-known/jwks.json'
+    IOT_TABLE: iot-${self:provider.stage}
+    IOT_INDEX: iotIdIndex-${self:provider.stage}
+    S3_BUCKET_PCAP: serverless-iotpcap-${self:provider.stage}
+    SIGNED_URL_EXPIRATION: 300
+
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:Scan
+        - dynamodb:PutItem
+        - dynamodb:GetItem
+      Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.IOT_TABLE}
+    - Effect: Allow
+      Action:
+        - s3:PutObject
+        - s3:GetObject
+      Resource: arn:aws:s3:::${self:provider.environment.S3_BUCKET_PCAP}/*
+
+custom:
+  topicName: pcapUploadTopic-${self:provider.stage}
+  documentation:
+    api:
+      info:
+        version: v0.0.1
+        title: IoT Device Managing and Profiling 
+        description: Serverless Application for IoT Device Managing and Profiling
+
+  serverless-offline:
+    port: 8001
+  dynamodb:
+    stages:
+      - ${self:provider.stage}
+    start:
+      port: 3001
+      inMemory: true
+      migrate: true
+  s3:
+    port: 3002
+    directory: /tmp 
+  #models:
+    #  - name: TodoRequest
+    #    contentType: application/json
+    #    schema: ${file(models/TodoItem.json)} # TODO change to 'requests/CreateTodoRequest.ts'
+    #  - name: TudoUpdateRequest
+    #    contentType: application/json
+    #    schema: ${file(models/TodoUpdate.json)}
+
+functions:
+  Auth:
+    handler: src/lambda/auth/auth0Authorizer.handler
+
+resources:
+  Resources:
+    #### API Gateway & Request Body Validation #############
+    GatewayResponseDefault4XX:
+      Type: AWS::ApiGateway::GatewayResponse
+      Properties:
+        ResponseParameters:
+          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+          gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+          gatewayresponse.header.Access-Control-Allow-Methods: "'GET,POST,DELETE,PATCH,OPTIONS'"
+        ResponseType: DEFAULT_4XX
+        RestApiId:
+          Ref: ApiGatewayRestApi
+    RequestBodyValidator:
+      Type: AWS::ApiGateway::RequestValidator
+      Properties:
+        Name: 'request-body-validator'
+        RestApiId:
+          Ref: ApiGatewayRestApi
+        ValidateRequestBody: true
+        ValidateRequestParameters: false
+    #### .pcap File Bucket ############
+    BucketPcap:
+      Type: AWS::S3::Bucket
+      DependsOn: SNSTopicPolicy
+      Properties:
+        BucketName: ${self:provider.environment.S3_BUCKET_PCAP}
+        NotificationConfiguration:
+          TopicConfigurations:
+            - Event: s3:ObjectCreated:Put
+              Topic: !Ref ImagesTopic
+        CorsConfiguration:
+          CorsRules:
+            -
+              AllowedOrigins:
+                - '*'
+              AllowedHeaders:
+                - '*'
+              AllowedMethods:
+                - GET
+                - PUT
+                - POST
+                - DELETE
+                - HEAD
+              MaxAge: 3000
+    BucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        PolicyDocument:
+          Id: BucketPcapPolicy
+          Version: "2012-10-17"
+          Statement:
+            - Sid: PublicReadForGetBucketObjects
+              Effect: Allow
+              Principal: '*'
+              Action: 's3:GetObject'
+              Resource: 'arn:aws:s3:::${self:provider.environment.S3_BUCKET_PCAP}/*'
+        Bucket: !Ref BucketPcap
+    IOTTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: id #partitionKey
+            AttributeType: S
+          - AttributeName: secId #sortKey
+            AttributeType: S
+          - AttributeName: createdAt #indexKey
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id #partitionKey
+            KeyType: HASH
+          - AttributeName: secId #sortKey
+            KeyType: RANGE
+        BillingMode: PAY_PER_REQUEST
+        TableName: ${self:provider.environment.IOT_TABLE}
+        LocalSecondaryIndexes:
+          - IndexName: ${self:provider.environment.IOT_INDEX}
+            KeySchema:
+              - AttributeName: id  #partitionKey
+                KeyType: HASH
+              - AttributeName: createdAt  #indexKey
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL # What attributes will be copied to an index
