@@ -55,6 +55,12 @@ custom:
       port: 3001
       inMemory: true
       migrate: true
+      seed: true
+    seed:
+      test:
+        sources:
+          - table: iot-${self:provider.stage}
+            sources: [./dynamodb-seedtest.json]
   s3:
     port: 3002
     directory: /tmp 
@@ -134,14 +140,29 @@ resources:
         AttributeDefinitions:
           - AttributeName: id #partitionKey
             AttributeType: S
-          - AttributeName: secId #sortKey
-            AttributeType: S
+          # INFO: Add these attributes later, here only essential schema
+          #- AttributeName: idType #sortKey 
+          #  AttributeType: S
+          #- AttributeName: secId #sortKey 
+          #  AttributeType: S
+          #- AttributeName: secType #sortKey 
+          #  AttributeType: S
+          #- AttributeName: idList #iot devices ids like: [f0:18:98:01:02:03,05ac:027a,00:00:72:6f:73:6e:65:73]
+          #  AttributeType: S #List
+          #- AttributeName: idListResolv #iot devices ids resolved like: [Apple,Apple Internal Keyboard,Miniware]
+          #  AttributeType: S #List 
+          #- AttributeName: idListTypes #iot devices ids like: [macaddr,lsusb,extendedpanid]
+          #  AttributeType: S #List
+          #- AttributeName: bundleList #iot devices ids like: [...]
+          #  AttributeType: S #List
           - AttributeName: createdAt #indexKey
+            AttributeType: S
+          - AttributeName: lastSeen  #indexKey
             AttributeType: S
         KeySchema:
           - AttributeName: id #partitionKey
             KeyType: HASH
-          - AttributeName: secId #sortKey
+          - AttributeName: createdAt #sortKey
             KeyType: RANGE
         BillingMode: PAY_PER_REQUEST
         TableName: ${self:provider.environment.IOT_TABLE}
@@ -150,7 +171,7 @@ resources:
             KeySchema:
               - AttributeName: id  #partitionKey
                 KeyType: HASH
-              - AttributeName: createdAt  #indexKey
+              - AttributeName: lastSeen  #indexKey
                 KeyType: RANGE
             Projection:
               ProjectionType: ALL # What attributes will be copied to an index

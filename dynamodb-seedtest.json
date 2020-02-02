@@ -1,0 +1,27 @@
+  [
+     { 
+        "id": "0a:0b:0c:00:00:01",
+        "idType": "macaddr",
+        "secId": "f0:18:98:01:02:03",
+        "secType": "macaddr",
+        "createdAt": "2019-12-30 00:00:00",
+        "lastSeen": "2019-12-30 00:00:00",
+        "idList":["0a:0b:0c:00:00:01", "05ac:027a", "00:00:72:6f:73:6e:65:73"],
+        "idListResolv":["Apple","Apple Internal Keyboard", "Miniware"],
+        "idListTypes":["macaddr","lsusb", "extendedpanid"],
+        "bundleList": ["00:00:00:00:00:01", "05ac:027a", "00:00:72:6f:73:6e:65:73", "0a:0b:0c:00:00:01"]
+    },
+      {
+        "id": "0a:0b:0c:00:00:02",
+        "idType": "macaddr",
+        "secId": "f0:18:98:01:02:03",
+        "secType": "macaddr",
+        "createdAt": "2019-12-30 00:00:00",
+        "lastSeen": "2019-12-30 00:00:00",
+        "idList":["0a:0b:0c:00:00:01", "05ac:027a", "00:00:72:6f:73:6e:65:73"],
+        "idListResolv":["Apple","Apple Internal Keyboard", "Miniware"],
+        "idListTypes":["macaddr","lsusb", "extendedpanid"],
+        "bundleList": ["0a:0b:0c:00:00:01", "05ac:027a", "00:00:72:6f:73:6e:65:73", "0a:0b:0c:00:00:01"]
+    }
+]
+
