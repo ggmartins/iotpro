@@ -127,10 +127,13 @@ func getStatusUsb() map[string]string {
 	return result
 }
 
-func getStatusEther() map[string]string {
+func getStatusEther(ouiMap map[string]string) map[string]string {
 	nstr := "  \t\n"
 	//find out the default routing ip
 	var routeIP string
+	var bundleList []string
+	var bundleListTypes []string
+	var bundleListResolv []string
 	result := make(map[string]string)
 	r, error := regexp.Compile("^(default|0.0.0.0)[ \t]+([0-9.]+)[ \t]+")
 	if error != nil {
@@ -197,10 +200,9 @@ func getStatusEther() map[string]string {
 			m = reth.FindStringSubmatch(s)
 			if len(m) > 1 {
 				//fmt.Printf("%s\n", m[1])
-				ifnToEth[ifn] = m[1]
+				ifnToEth[ifn] = strings.Trim(m[1], nstr)
 			}
 			m = rnet.FindStringSubmatch(s)
-
 			if len(m) > 1 {
 				var s1 = []rune(m[0])
 				var s2 = []rune(routeIP)
@@ -215,19 +217,56 @@ func getStatusEther() map[string]string {
 			}
 		}
 	}
-	for key, value := range ifnToEth {
+	for _, value := range ifnToEth {
 		if value != "" {
-			fmt.Println("iface:", key, "mac:", value)
+			oui := ouiMap[value[:8]]
+			bundleList = append(bundleList, value)
+			bundleListTypes = append(bundleListTypes, "macaddr")
+			bundleListResolv = append(bundleListResolv, oui)
 		}
 	}
-	//TODO: bundleList, bundleListResolv, bundleTypes
+	//fmt.Printf("%#v\n", bundleList)
+	//fmt.Printf("%#v\n", bundleListTypes)
+	//fmt.Printf("%#v\n", bundleListResolv)
 	fmt.Println("default route iface:" + ifnToEth[rountIfn])
 	fmt.Println("routeIp: " + routeIP)
 	log.Println("Finished.")
 	return result
 }
 
+func getOUIMap(filePath string) map[string]string {
+	roui, error := regexp.Compile("^([A-F0-9]{2}-[A-F0-9]{2}-[A-F0-9]{2}).*\\(hex\\)[ \t]+(.*)")
+	if error != nil {
+		log.Panic(error)
+	}
+	result := make(map[string]string)
+	file, err := os.Open(filePath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		s := scanner.Text()
+		m := roui.FindStringSubmatch(s)
+		if len(m) > 2 {
+			//fmt.Printf("[%s] - [%s]\n",
+			//	strings.ReplaceAll(strings.ToLower(m[1]), "-", ":"),
+			//	m[2])
+			result[strings.ReplaceAll(strings.ToLower(m[1]), "-", ":")] = m[2]
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		log.Fatal(err)
+	}
+
+	return result
+}
+
 func main() {
+
 	//lift https://blog.golang.org/go-maps-in-action
 	log.Println("Initializing...")
 
@@ -243,6 +282,8 @@ func main() {
 		log.Panic("Unable to load " + ouiFileLocal)
 	}
 
+	ouiMap := getOUIMap(ouiFileLocal)
+	//fmt.Printf("%s\n", oui["test"])
 	/*lsusb := getStatusUsb()
 	bsonUsb, err := json.Marshal(lsusb)
 	if err != nil {
@@ -251,7 +292,7 @@ func main() {
 	os.Stdout.Write(bsonUsb)
 	fmt.Println("")*/
 
-	lsether := getStatusEther()
+	lsether := getStatusEther(ouiMap)
 	bsonEther, err := json.Marshal(lsether)
 	if err != nil {
 		fmt.Println("error:", err)
