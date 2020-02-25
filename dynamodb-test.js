@@ -18,6 +18,7 @@ dynamodb.describeTable(params, function(err, data) {
 var params = {
     TableName: 'iot-dev',
     Item: { // a map of attribute name to AttributeValue
+	'uuid': '51d3f943-04ae-47c6-b215-eeb26766a6b2'
         'id': '00:00:00:00:00:01',
         'idType': 'macaddr',
         'secId': 'f0:18:98:01:02:03',
@@ -51,6 +52,7 @@ docClient.put(params, function(err, data) {
 var params = {
     TableName: 'iot-dev',
     Item: { // a map of attribute name to AttributeValue
+        'uuid': '289f3147-ca21-4657-8fe1-0fc8c1e94021'
         'id': '00:00:00:00:00:02',
         'idType': 'macaddr',
         'secId': 'f0:18:98:01:02:03',

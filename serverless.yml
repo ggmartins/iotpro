@@ -138,7 +138,9 @@ resources:
       Type: AWS::DynamoDB::Table
       Properties:
         AttributeDefinitions:
-          - AttributeName: id #partitionKey
+          - AttributeName: uuid #partitionKey
+            AttributeType: S
+          - AttributeName: id #mac / pan / extended pan mac 
             AttributeType: S
           # INFO: Add these attributes later, here only essential schema
           #- AttributeName: idType #sortKey 
@@ -160,7 +162,7 @@ resources:
           - AttributeName: lastSeen  #indexKey
             AttributeType: S
         KeySchema:
-          - AttributeName: id #partitionKey
+          - AttributeName: uuid #partitionKey
             KeyType: HASH
           - AttributeName: createdAt #sortKey
             KeyType: RANGE

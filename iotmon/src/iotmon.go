@@ -291,7 +291,7 @@ func main() {
 	}
 	os.Stdout.Write(bsonUsb)
 	fmt.Println("")*/
-
+        //https://stackoverflow.com/questions/31361375/how-to-check-if-a-monitor-is-plugged-in-linux
 	lsether := getStatusEther(ouiMap)
 	bsonEther, err := json.Marshal(lsether)
 	if err != nil {
