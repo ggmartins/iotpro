@@ -1,0 +1,13 @@
+    # https://www.youtube.com/watch?v=QcSP3zB2SF0 intro
+    # https://www.youtube.com/watch?v=ukmHvLO86Kc endpoint types
+    # https://www.youtube.com/watch?v=o6r5wU8Lpt4 lambda integration
+    # https://www.youtube.com/watch?v=dOYkp8fHfoQ stages
+    # https://www.youtube.com/watch?v=vK-LDu-lXvM manual api creation
+    # https://www.youtube.com/watch?v=LtgoZrsnKQY cors
+    # https://www.youtube.com/watch?v=Px1LmMXSps8 cors enabled
+    # https://www.youtube.com/watch?v=M4-yY3Hv8w0 react routing
+    # https://www.youtube.com/watch?v=7IV0RzIuwuQ react create group 1
+    # https://www.youtube.com/watch?v=2oTUXjSsA8M react create group 2
+    # https://www.youtube.com/watch?v=t1w4qiP4NYo pre flight error
+    # https://www.youtube.com/watch?v=sBucACuXJyY pre flight for options <---
+    # https://www.youtube.com/watch?v=6RXl5bi9jMY pricing 1M request per month
