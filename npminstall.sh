@@ -20,3 +20,5 @@ npm i http-aws-es
 npm i jsonwebtoken
 npm i uuid
 npm i axios
+npm i aws-xray-sdk
+npm i @types/jest

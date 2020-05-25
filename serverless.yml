@@ -76,22 +76,23 @@ functions:
   Auth:
     handler: src/lambda/auth/auth0Authorizer.handler
 
+  IoTUpdate:
+    handler: src/lambda/http/updateStatus.handler
+    events:
+      - http:
+          method: get
+          path: iot/{id}
+          cors: true
+          #authorizer: Auth
+    iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:PutItem
+      Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.IOT_TABLE}
+
 resources:
   Resources:
     #### API Gateway & Request Body Validation #############
-    # https://www.youtube.com/watch?v=QcSP3zB2SF0 intro
-    # https://www.youtube.com/watch?v=ukmHvLO86Kc endpoint types
-    # https://www.youtube.com/watch?v=o6r5wU8Lpt4 lambda integration
-    # https://www.youtube.com/watch?v=dOYkp8fHfoQ stages
-    # https://www.youtube.com/watch?v=vK-LDu-lXvM manual api creation
-    # https://www.youtube.com/watch?v=LtgoZrsnKQY cors
-    # https://www.youtube.com/watch?v=Px1LmMXSps8 cors enabled
-    # https://www.youtube.com/watch?v=M4-yY3Hv8w0 react routing
-    # https://www.youtube.com/watch?v=7IV0RzIuwuQ react create group 1
-    # https://www.youtube.com/watch?v=2oTUXjSsA8M react create group 2
-    # https://www.youtube.com/watch?v=t1w4qiP4NYo pre flight error
-    # https://www.youtube.com/watch?v=sBucACuXJyY pre flight for options <---
-    # https://www.youtube.com/watch?v=6RXl5bi9jMY pricing 1M request per month
     GatewayResponseDefault4XX: #Edge Optimized
       Type: AWS::ApiGateway::GatewayResponse
       Properties:
@@ -154,23 +155,6 @@ resources:
           - AttributeName: uuid #partitionKey
             AttributeType: S
           # https://stackoverflow.com/questions/30866030/number-of-attributes-in-key-schema-must-match-the-number-of-attributes-defined-i
-          #- AttributeName: id #mac / pan / extended pan mac 
-          #  AttributeType: S
-          # INFO: Add these attributes later, here only essential schema
-          #- AttributeName: idType #sortKey 
-          #  AttributeType: S
-          #- AttributeName: secId #sortKey 
-          #  AttributeType: S
-          #- AttributeName: secType #sortKey 
-          #  AttributeType: S
-          #- AttributeName: idList #iot devices ids like: [f0:18:98:01:02:03,05ac:027a,00:00:72:6f:73:6e:65:73]
-          #  AttributeType: S #List
-          #- AttributeName: idListResolv #iot devices ids resolved like: [Apple,Apple Internal Keyboard,Miniware]
-          #  AttributeType: S #List 
-          #- AttributeName: idListTypes #iot devices ids like: [macaddr,lsusb,extendedpanid]
-          #  AttributeType: S #List
-          #- AttributeName: bundleList #iot devices ids like: [...]
-          #  AttributeType: S #List
           - AttributeName: createdAt #indexKey
             AttributeType: S
           - AttributeName: lastSeen  #indexKey

@@ -22,6 +22,7 @@ import (
 //Config monitor config
 type Config struct {
 	URL string `yaml:"url"`
+	KEY string `yaml:"key"`
 }
 
 //IoTBundle status update, do not change
@@ -38,6 +39,7 @@ type IoTBundle struct {
 	BundleListDel    []string `yaml:"-" json:"bundleListDel`
 	HasChanged       bool     `yaml:"-" json:"hasChanged`
 	LastSeen         string   `yaml:"-" json:"lastSeen`
+	Key				 string   //iotmon.config.yaml
 }
 
 const iotstatusyaml = "./iotmon.status.yaml"
@@ -303,6 +305,8 @@ func main() {
 	}
 
 	log.Println("Done.")
+
+	log.Printf("Using key: [%s]\n", config.KEY[:3]+"****"+config.KEY[len(config.KEY)-3:])
 	if !fileExists(ouiFileLocal) {
 		log.Panic("Unable to load " + ouiFileLocal)
 	}
@@ -411,6 +415,7 @@ func main() {
 
 	}
 	iotBundle.LastSeen = time.Now().Format(time.RFC3339)
+	iotBundle.Key = config.KEY
 	jsonOut, err := json.Marshal(iotBundle)
 	if err != nil {
 		fmt.Println("error:", err)
