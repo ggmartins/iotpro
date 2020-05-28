@@ -8,12 +8,15 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
+	"path"
 	"os"
 	"os/exec"
 	"reflect"
 	"regexp"
 	"strings"
 	"time"
+	"bytes"
 
 	"github.com/google/uuid"
 	"gopkg.in/yaml.v3"
@@ -23,6 +26,7 @@ import (
 type Config struct {
 	URL string `yaml:"url"`
 	KEY string `yaml:"key"`
+	Status string `yaml:"status"`
 }
 
 //IoTBundle status update, do not change
@@ -42,6 +46,7 @@ type IoTBundle struct {
 	Key				 string   //iotmon.config.yaml
 }
 
+const iotstatus = "./iotmon.status"
 const iotstatusyaml = "./iotmon.status.yaml"
 const iotconfigyaml = "./iotmon.config.yaml"
 const ouiFileURL = "http://standards-oui.ieee.org/oui.txt"
@@ -288,6 +293,8 @@ func getOUIMap(filePath string) map[string]string {
 func main() {
 	//lift https://blog.golang.org/go-maps-in-action
 	log.Printf("Initializing...\n")
+	var resp *http.Response 
+	var err error
 	config := Config{}
 	conffile, err := ioutil.ReadFile(iotconfigyaml)
 	if err != nil {
@@ -420,10 +427,80 @@ func main() {
 	if err != nil {
 		fmt.Println("error:", err)
 	}
-	resp, err := http.Post(config.URL,
-		"application/json",
-		strings.NewReader(string(jsonOut)))
+    if config.Status == "enable" {
+		if _, err := os.Stat(iotstatus); err == nil {
+            client := &http.Client{}
+			u, err := url.Parse(config.URL)
+			u.Path = path.Join(u.Path, iotBundle.UUID)
+		
+			req, err := http.NewRequest(http.MethodPut, u.String(), bytes.NewBuffer(jsonOut))
+			if err != nil {
+				panic(err)
+			}
+		
+			req.Header.Set("Content-Type", "application/json; charset=utf-8")
+			resp, err = client.Do(req)
+			if err != nil {
+				panic(err)
+			}
 
-	fmt.Printf("%#v %s\n", resp, string(jsonOut))
+			log.Printf("PUT Update %#v\n", resp.Status)
+
+		} else if os.IsNotExist(err) {
+
+			resp, err = http.Post(config.URL,
+				"application/json",
+				strings.NewReader(string(jsonOut)))
+			
+			if err != nil {
+				panic(err)
+			}
+
+			log.Printf("POST Create %#v\n", resp.Status)
+
+			if resp.StatusCode == 200 {
+				_,err := os.Create(iotstatus)
+				if err != nil {
+					panic(err)
+				}	
+			}
+
+		} else {
+			log.Println("Invalid status: " + iotstatus)
+		}
+	} else {
+		if _, err := os.Stat(iotstatus); err == nil {
+			client := &http.Client{}
+			u, err := url.Parse(config.URL)
+			u.Path = path.Join(u.Path, iotBundle.UUID)
+
+			req, err := http.NewRequest(http.MethodDelete, u.String(), nil)
+			if err != nil {
+				panic(err)
+			}
+		
+			req.Header.Set("Content-Type", "application/json; charset=utf-8")
+			resp, err = client.Do(req)
+			if err != nil {
+				panic(err)
+			}
+
+			log.Printf("DEL Delete %#v\n", resp.Status)
+
+			os.Remove(iotstatus)
+
+		} else if os.IsNotExist(err) {
+			log.Println("IoT Device Disabled.")
+			os.Exit(0)
+		} else {
+			log.Println("Invalid status: " + iotstatus + " (config.status)")
+			os.Exit(0)
+		}
+	}
+
+	/*fmt.Printf("%#v %s\n", resp, string(jsonOut))
+	if err != nil {
+		panic(err)
+	}*/
 
 }

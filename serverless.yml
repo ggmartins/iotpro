@@ -45,6 +45,10 @@ custom:
         version: v0.0.1
         title: IoT Device Managing and Profiling 
         description: Serverless Application for IoT Device Managing and Profiling
+    models:
+      - name: UpdateRequest
+        contentType: application/json
+        schema: models/IotUpdate.ts #${file(models/IotUpdate.ts)}
 
   serverless-offline:
     port: 8001
@@ -76,12 +80,32 @@ functions:
   Auth:
     handler: src/lambda/auth/auth0Authorizer.handler
 
-  IoTUpdate:
+  IoTPut:
     handler: src/lambda/http/updateStatus.handler
     events:
       - http:
-          method: get
+          method: put
           path: iot/{id}
+          cors: true
+          #authorizer: Auth #switched to simpler validation 
+          documentation:
+            summary: Update IoT Status
+            description: Update IoT Status
+            reqValidatorName: RequestBodyValidator
+            requestModels:
+              'application/json': UpdateRequest
+    iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:PutItem
+      Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.IOT_TABLE}
+
+  IoTPost:
+    handler: src/lambda/http/updateStatus.handler
+    events:
+      - http:
+          method: post
+          path: iot
           cors: true
           #authorizer: Auth
     iamRoleStatements:

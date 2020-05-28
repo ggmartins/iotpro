@@ -4,7 +4,7 @@
 import { createLogger } from '../utils/logger'
 import { IotUpdate } from '../models/IotUpdate'
 import { Response } from '../models/Response'
-import { Key } from '../models/Key'
+//import { Key } from '../models/Key'
 //import * as uuid from 'uuid'
 
 //const XAWS = AWSXRay.captureAWS(AWS)
@@ -31,9 +31,8 @@ export class IoTAccess {
         //  this.docClient = new XAWS.DynamoDB.DocumentClient()
     }
 
-    async cacheKeyProfiles(): Promise<Key[]> {
-
-        return []
+    async cacheKeyProfiles(): Promise<string[]> {
+        return ['thissecretistmp']
     }
 
     async updIotUpdate(iotUpdate: IotUpdate,  response: Response) {
