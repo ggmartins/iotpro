@@ -462,7 +462,7 @@ func main() {
 				_,err := os.Create(iotstatus)
 				if err != nil {
 					panic(err)
-				}	
+				}
 			}
 
 		} else {

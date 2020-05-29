@@ -1,4 +1,4 @@
-  import 'source-map-support/register'
+import 'source-map-support/register'
 import { APIGatewayProxyEvent, APIGatewayProxyHandler, APIGatewayProxyResult } from 'aws-lambda'
 //import { UpdateRequest } from '../../requests/UpdateRequest'
 //import { Key } from '../../models/Key'
@@ -12,8 +12,9 @@ const iotAccess = new IoTAccess(false)
 const logger = createLogger('updatestatus')
 var keys: Array<string> = null
 
-function getNotImplemented() {
-  const res: Response = { statusCode: 501, message: 'Not Implemented'};
+//{ statusCode: 401, message: 'Unauthorized' };
+//{ statusCode: 501, message: 'Not Implemented' }
+function getResponse(res : Response){
   return {
     statusCode: res.statusCode,
     headers: {
@@ -29,7 +30,7 @@ function getNotImplemented() {
 //https://stackoverflow.com/questions/60099777/in-a-apigatewayproxyevent-what-field-will-give-me-the-url
 export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   const iotUpdate: IotUpdate = JSON.parse(event.body)
-  const res: Response = { statusCode: 501, message: 'Not Implemented'};
+  const res: Response = { statusCode: 501, message: 'Not Implemented' };
   
   if (!keys) {
     await iotAccess.cacheKeyProfiles().then(k=>{
@@ -37,7 +38,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       console.log("keys <-")
     }).catch(e => {
       console.log(e)
-      return getNotImplemented()
+      return getResponse({ statusCode: 501, message: 'Not Implemented'})
     })
   }
 
@@ -46,7 +47,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
 
   if(keys.includes(iotUpdate.Key)) {
     console.log("INFO: Key Validated")
-  }
+  } else return getResponse({ statusCode: 401, message: 'Unauthorized' })
 
   //logger.info("updateStatus: " + JSON.stringify(event.httpMethod))
   
@@ -56,6 +57,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
   switch(event.httpMethod) {
     case("PUT"):
       console.log("PUT:"+event.httpMethod)
+      await iotAccess.updIotUpdate(iotUpdate, res)
     break;
     case("POST"):
       console.log("POST:"+event.httpMethod)
@@ -67,9 +69,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
   }
 
   //const update: IotUpdate = await todoAccess.newTodoItem(userId, newTodo.name, newTodo.dueDate, res)
-
-  const response: Response = await iotAccess.updIotUpdate(iotUpdate, res)
-  logger.info("updateStatus: " + JSON.stringify(response.message))
+  logger.info("updateStatus: " + JSON.stringify(res.message))
 
   return {
     statusCode: res.statusCode,
@@ -78,7 +78,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       'Access-Control-Allow-Credentials': true
     },
     body: JSON.stringify({
-      response
+      message : res.message
     })
   }
 }
