@@ -7,7 +7,7 @@ import { IotUpdate } from '../../models/IotUpdate'
 import { IoTAccess } from '../../dataLayer/IoTAccess'
 import { createLogger } from '../../utils/logger'
 
-const iotAccess = new IoTAccess(false)
+const iotAccess = new IoTAccess(true)
 
 const logger = createLogger('updatestatus')
 var keys: Array<string> = null
@@ -56,10 +56,11 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
 
   switch(event.httpMethod) {
     case("PUT"):
-      console.log("PUT:"+event.httpMethod)
+      console.log("processing PUT.")
       await iotAccess.updIotUpdate(iotUpdate, res)
     break;
     case("POST"):
+      console.log("processing POST.")
       console.log("POST:"+event.httpMethod)
     break;
     case("GET"):

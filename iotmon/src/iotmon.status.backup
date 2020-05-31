@@ -1,0 +1,11 @@
+uuid: 10000000-0001-0001-0001-000000000001
+createdAt: '2020-05-30T00:44:41-05:00'
+id: f0:18:98:00:00:00
+idType: mac
+bundleList: ['05ac:027a', '05ac:8103', '05ac:8262', '05ac:8514', '05ac:8233']
+bundleListType: [usb, usb, usb, usb, usb]
+bundleListResolv: ["", "", "", "", ""]
+bundleListDesc: [Apple Inc. Apple T2 Bus, Apple Inc. Headset, Apple Inc. Ambient Light
+        Sensor, Apple Inc. FaceTime HD Camera (Built-in), Apple Inc. Apple T2 Controller]
+bundleListUUID: [30356163-3a30-4237-a130-3561633a3032, 30356163-3a38-4130-b330-3561633a3831,
+    30356163-3a38-4236-b230-3561633a3832, 30356163-3a38-4531-b430-3561633a3835, 30356163-3a38-4233-b330-3561633a3832]

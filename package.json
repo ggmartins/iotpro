@@ -1,0 +1,37 @@
+{
+  "name": "iotpro",
+  "version": "0.0.1",
+  "description": "IoT Device Managing and Profiling",
+  "main": "handler.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Guilherme Martins",
+  "license": "ISC",
+  "dependencies": {
+    "@types/jest": "^25.2.3",
+    "@types/node": "^13.13.9",
+    "aws-xray-sdk": "^3.0.1",
+    "axios": "^0.19.2",
+    "http-aws-es": "^6.0.0",
+    "jsonwebtoken": "^8.5.1",
+    "middy": "^0.36.0",
+    "serverless": "^1.71.3",
+    "source-map-support": "^0.5.19",
+    "uuid": "^8.1.0"
+  },
+  "devDependencies": {
+    "aws-sdk": "^2.686.0",
+    "elasticsearch": "^15.5.0",
+    "serverless-aws-documentation": "^1.1.0",
+    "serverless-dynamodb-local": "^0.2.39",
+    "serverless-iam-roles-per-function": "^2.0.2",
+    "serverless-offline": "^6.3.0",
+    "serverless-reqvalidator-plugin": "^1.0.3",
+    "serverless-s3-local": "^0.6.1",
+    "serverless-webpack": "^5.3.2",
+    "ts-loader": "^6.2.2",
+    "typescript": "^3.9.3",
+    "webpack": "^4.43.0"
+  }
+}

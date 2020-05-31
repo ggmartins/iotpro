@@ -32,6 +32,7 @@ type Config struct {
 //IoTBundle status update, do not change
 type IoTBundle struct {
 	UUID             string   `yaml:"uuid" json:"uuid"`
+	CreatedAt        string   `yaml:"createdAt" json:"createdAt"`
 	ID               string   `yaml:"id" json:"id"`
 	IDType           string   `yaml:"idType" json:"idType"`
 	BundleList       []string `yaml:"bundleList,flow" json:"bundleList,flow"`
@@ -337,6 +338,7 @@ func main() {
 	iotBundle.UUID = fmt.Sprintf("%s", uid)
 	iotBundle.ID = defroute
 	iotBundle.IDType = "mac"
+	iotBundle.CreatedAt = time.Now().Format(time.RFC3339)
 	for _, key := range reflect.ValueOf(maplsusb).MapKeys() {
 		iotBundle.BundleList = append(iotBundle.BundleList, fmt.Sprintf("%s", key))
 		iotBundle.BundleListType = append(iotBundle.BundleListType, "usb")
@@ -388,6 +390,7 @@ func main() {
 
 	} else {
 		err = yaml.Unmarshal(yamlfile, &iotBundleOld)
+		fmt.Printf("%s\n",iotBundleOld.CreatedAt)
 		if err != nil {
 			panic(err)
 		}
@@ -421,6 +424,7 @@ func main() {
 		}
 
 	}
+	iotBundle.CreatedAt = iotBundleOld.CreatedAt
 	iotBundle.LastSeen = time.Now().Format(time.RFC3339)
 	iotBundle.Key = config.KEY
 	jsonOut, err := json.Marshal(iotBundle)
@@ -444,7 +448,7 @@ func main() {
 				panic(err)
 			}
 
-			log.Printf("PUT Update %#v\n", resp.Status)
+			log.Printf("PUT Update %#v %s\n", resp.Status, bodyToString(resp.Body))
 
 		} else if os.IsNotExist(err) {
 
@@ -485,7 +489,7 @@ func main() {
 				panic(err)
 			}
 
-			log.Printf("DEL Delete %#v\n", resp.Status)
+			log.Printf("DEL Delete %#v %s\n", resp.Status, bodyToString(resp.Body))
 
 			os.Remove(iotstatus)
 
@@ -504,3 +508,13 @@ func main() {
 	}*/
 
 }
+
+func bodyToString(body io.Reader) string {
+	bodyBytes, err := ioutil.ReadAll(body)
+	if err != nil {
+		log.Fatal(err)
+	}
+	bodyString := string(bodyBytes)
+	return bodyString
+}
+

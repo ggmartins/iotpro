@@ -12,7 +12,7 @@ plugins:
 
 provider:
   name: aws
-  runtime: nodejs12
+  #runtime: nodejs12
 
   stage: ${opt:stage, 'dev'}
   region: ${opt:region, 'us-east-1'}
@@ -51,7 +51,7 @@ custom:
         schema: models/IotUpdate.ts #${file(models/IotUpdate.ts)}
 
   serverless-offline:
-    port: 8001
+    port: 8001 #3000?
   dynamodb:
     stages:
       - ${self:provider.stage}
@@ -66,7 +66,7 @@ custom:
           - table: iot-${self:provider.stage}
             sources: [./dynamodb-seedtest.json]
   s3:
-    port: 3002
+    port: 3010
     directory: /tmp 
   #models:
     #  - name: TodoRequest
