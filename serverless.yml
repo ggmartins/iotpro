@@ -12,7 +12,7 @@ plugins:
 
 provider:
   name: aws
-  #runtime: nodejs12
+  #runtime: nodejs12 #https://github.com/dherault/serverless-offline/issues/381
 
   stage: ${opt:stage, 'dev'}
   region: ${opt:region, 'us-east-1'}
@@ -47,8 +47,8 @@ custom:
         description: Serverless Application for IoT Device Managing and Profiling
     models:
       - name: UpdateRequest
-        contentType: application/json
-        schema: models/IotUpdate.ts #${file(models/IotUpdate.ts)}
+        contentType: application/typescript
+        schema: models/IotUpdate.ts #${file(models/IotUpdate.json)}
 
   serverless-offline:
     port: 8001 #3000?
@@ -93,7 +93,7 @@ functions:
             description: Update IoT Status
             reqValidatorName: RequestBodyValidator
             requestModels:
-              'application/json': UpdateRequest
+              'application/typescript': UpdateRequest
     iamRoleStatements:
     - Effect: Allow
       Action:
@@ -108,10 +108,36 @@ functions:
           path: iot
           cors: true
           #authorizer: Auth
+          documentation:
+            summary: Update IoT Status
+            description: Update IoT Status
+            reqValidatorName: RequestBodyValidator
+            requestModels:
+              'application/typescript': UpdateRequest
     iamRoleStatements:
     - Effect: Allow
       Action:
         - dynamodb:PutItem
+      Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.IOT_TABLE}
+
+  IoTDelete:
+    handler: src/lambda/http/updateStatus.handler
+    events:
+      - http:
+          method: delete
+          path: iot/{id}
+          cors: true
+          #authorizer: Auth
+          documentation:
+            summary: Update IoT Status
+            description: Update IoT Status
+            reqValidatorName: RequestBodyValidator
+            requestModels:
+              'application/typescript': UpdateRequest
+    iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:DeleteItem
       Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.IOT_TABLE}
 
 resources:

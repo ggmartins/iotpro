@@ -37,7 +37,7 @@ type IoTBundle struct {
 	IDType           string   `yaml:"idType" json:"idType"`
 	BundleList       []string `yaml:"bundleList,flow" json:"bundleList,flow"`
 	BundleListType   []string `yaml:"bundleListType,flow" json:"bundleListType,flow"`
-	BundleListResolv []string `yaml:"bundleListResolv,flow" json:"bundleListResolv,flow"`
+	//BundleListResolv []string `yaml:"bundleListResolv,flow" json:"bundleListResolv,flow"`
 	BundleListDesc   []string `yaml:"bundleListDesc,flow" json:"bundleListDesc,flow"`
 	BundleListUUID   []string `yaml:"bundleListUUID,flow" json:"bundleListUUID,flow"`
 	BundleListAdd    []string `yaml:"-" json:"bundleListAdd`
@@ -48,6 +48,7 @@ type IoTBundle struct {
 }
 
 const iotstatus = "./iotmon.status"
+const iotstatusbkup = "./iotmon.status.backup"
 const iotstatusyaml = "./iotmon.status.yaml"
 const iotconfigyaml = "./iotmon.config.yaml"
 const ouiFileURL = "http://standards-oui.ieee.org/oui.txt"
@@ -296,6 +297,7 @@ func main() {
 	log.Printf("Initializing...\n")
 	var resp *http.Response 
 	var err error
+	iotstatus_exist := true
 	config := Config{}
 	conffile, err := ioutil.ReadFile(iotconfigyaml)
 	if err != nil {
@@ -312,6 +314,18 @@ func main() {
 		DownloadFile(ouiFileLocal, ouiFileURL)
 	}
 
+	if !fileExists(iotstatus) {
+		if config.Status == "enable" || config.Status == "enabled" {
+			if fileExists(iotstatusyaml) {
+				log.Printf("INFO: NEW EXECUTION, renaming old %s to %s.\n", iotstatusyaml, iotstatusbkup)
+				err := os.Rename(iotstatusyaml, iotstatusbkup)
+				if err != nil {
+					log.Fatal(err)
+				}
+			}
+		}
+		iotstatus_exist = false
+	}
 	log.Println("Done.")
 
 	log.Printf("Using key: [%s]\n", config.KEY[:3]+"****"+config.KEY[len(config.KEY)-3:])
@@ -342,7 +356,7 @@ func main() {
 	for _, key := range reflect.ValueOf(maplsusb).MapKeys() {
 		iotBundle.BundleList = append(iotBundle.BundleList, fmt.Sprintf("%s", key))
 		iotBundle.BundleListType = append(iotBundle.BundleListType, "usb")
-		iotBundle.BundleListResolv = append(iotBundle.BundleListResolv, "") //TBD
+		//iotBundle.BundleListResolv = append(iotBundle.BundleListResolv, "Unresolved") //TBD, use OUI for mapping mac addresses
 		iotBundle.BundleListDesc = append(iotBundle.BundleListDesc, maplsusb[fmt.Sprintf("%s", key)])
 
 		seed := strings.NewReader(fmt.Sprintf("%s", key) + fmt.Sprintf("%s", key)) //TODO: better seeding
@@ -360,7 +374,7 @@ func main() {
 	for _, key := range reflect.ValueOf(maplsether).MapKeys() {
 		iotBundle.BundleList = append(iotBundle.BundleList, fmt.Sprintf("%s", key))
 		iotBundle.BundleListType = append(iotBundle.BundleListType, "mac")
-		iotBundle.BundleListResolv = append(iotBundle.BundleListResolv, "") //TBD
+		//iotBundle.BundleListResolv = append(iotBundle.BundleListResolv, "Unresolved") //TBD, use OUI for mapping mac addresses
 		iotBundle.BundleListDesc = append(iotBundle.BundleListDesc, maplsether[fmt.Sprintf("%s", key)])
 		seed := strings.NewReader(fmt.Sprintf("%s", key) + fmt.Sprintf("%s", key)) //TODO: better seeding
 		uuid.SetRand(seed)
@@ -390,7 +404,7 @@ func main() {
 
 	} else {
 		err = yaml.Unmarshal(yamlfile, &iotBundleOld)
-		fmt.Printf("%s\n",iotBundleOld.CreatedAt)
+		log.Printf("INFO: using [%s] with timestamp: %s as cached.\n", iotstatusyaml, iotBundleOld.CreatedAt)
 		if err != nil {
 			panic(err)
 		}
@@ -422,17 +436,16 @@ func main() {
 				iotBundle.HasChanged = true
 			}
 		}
-
+        iotBundle.CreatedAt = iotBundleOld.CreatedAt
 	}
-	iotBundle.CreatedAt = iotBundleOld.CreatedAt
 	iotBundle.LastSeen = time.Now().Format(time.RFC3339)
 	iotBundle.Key = config.KEY
 	jsonOut, err := json.Marshal(iotBundle)
 	if err != nil {
 		fmt.Println("error:", err)
 	}
-    if config.Status == "enable" {
-		if _, err := os.Stat(iotstatus); err == nil {
+    if config.Status == "enable" || config.Status == "enabled"{
+		if iotstatus_exist {
             client := &http.Client{}
 			u, err := url.Parse(config.URL)
 			u.Path = path.Join(u.Path, iotBundle.UUID)
@@ -449,9 +462,7 @@ func main() {
 			}
 
 			log.Printf("PUT Update %#v %s\n", resp.Status, bodyToString(resp.Body))
-
-		} else if os.IsNotExist(err) {
-
+		} else {
 			resp, err = http.Post(config.URL,
 				"application/json",
 				strings.NewReader(string(jsonOut)))
@@ -468,17 +479,14 @@ func main() {
 					panic(err)
 				}
 			}
-
-		} else {
-			log.Println("Invalid status: " + iotstatus)
 		}
 	} else {
-		if _, err := os.Stat(iotstatus); err == nil {
+		if iotstatus_exist {
 			client := &http.Client{}
 			u, err := url.Parse(config.URL)
 			u.Path = path.Join(u.Path, iotBundle.UUID)
 
-			req, err := http.NewRequest(http.MethodDelete, u.String(), nil)
+			req, err := http.NewRequest(http.MethodDelete, u.String(), bytes.NewBuffer(jsonOut))
 			if err != nil {
 				panic(err)
 			}
@@ -493,11 +501,8 @@ func main() {
 
 			os.Remove(iotstatus)
 
-		} else if os.IsNotExist(err) {
-			log.Println("IoT Device Disabled.")
-			os.Exit(0)
 		} else {
-			log.Println("Invalid status: " + iotstatus + " (config.status)")
+			log.Println("IoT Device Disabled.")
 			os.Exit(0)
 		}
 	}

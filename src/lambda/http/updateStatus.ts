@@ -30,12 +30,20 @@ function getResponse(res : Response){
 //https://stackoverflow.com/questions/60099777/in-a-apigatewayproxyevent-what-field-will-give-me-the-url
 export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   const iotUpdate: IotUpdate = JSON.parse(event.body)
-  const res: Response = { statusCode: 501, message: 'Not Implemented' };
+  const res: Response = { statusCode: 501, message: 'Not Implemented' }
+  var ID: string = null
   
+  if (event.hasOwnProperty('pathParameters') && 
+      event.pathParameters !==null &&
+      event.pathParameters.hasOwnProperty('id')) {
+      ID = event.pathParameters.id
+  }
+  
+  logger.info("ID: "+ID)
+  //TODO: move to authorizer
   if (!keys) {
     await iotAccess.cacheKeyProfiles().then(k=>{
       keys = k
-      console.log("keys <-")
     }).catch(e => {
       console.log(e)
       return getResponse({ statusCode: 501, message: 'Not Implemented'})
@@ -45,7 +53,9 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
   console.log("INFO: keys: " + keys)
   console.log("INFO: key: " + JSON.stringify(iotUpdate))
 
-  if(keys.includes(iotUpdate.Key)) {
+  if(iotUpdate !== null &&
+     iotUpdate.hasOwnProperty('Key') &&
+     keys.includes(iotUpdate.Key)) {
     console.log("INFO: Key Validated")
   } else return getResponse({ statusCode: 401, message: 'Unauthorized' })
 
@@ -56,14 +66,18 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
 
   switch(event.httpMethod) {
     case("PUT"):
-      console.log("processing PUT.")
+      console.log("Processing PUT...")
       await iotAccess.updIotUpdate(iotUpdate, res)
     break;
-    case("POST"):
-      console.log("processing POST.")
-      console.log("POST:"+event.httpMethod)
+    case("DELETE"):
+      console.log("Processing DELETE...")
+      await iotAccess.delIotUpdate(iotUpdate, res)
     break;
-    case("GET"):
+    case("POST"):
+      console.log("Processing POST...")
+      await iotAccess.pstIotUpdate(iotUpdate, res)
+    break;
+    case("GET"): //TODO move this to "getStatus"
       console.log("GET:"+event.httpMethod)
     break;
     default:

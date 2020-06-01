@@ -59,6 +59,40 @@ export class IoTAccess {
             response.message = err
     })*/
 
+
+    async pstIotUpdate(iotUpdate: IotUpdate,  response: Response): Promise<boolean> {
+        response.statusCode = 200
+        response.message = 'OK'
+        let ret = true
+        logger.info("pstIotUpdate " + iotUpdate.uuid + " " + iotUpdate.createdAt)
+
+        await this.docClient.put({TableName: this.IotTable,
+            Item:{
+                'uuid': iotUpdate.uuid,
+                'id': iotUpdate.id,
+                'idType': iotUpdate.idType,
+                'createdAt': iotUpdate.createdAt,
+                'lastSeen': iotUpdate.LastSeen,
+                'bundleList': iotUpdate.bundleList,
+                'bundleListType': iotUpdate.bundleListType,
+                'bundleListDesc': iotUpdate.bundleListDesc,
+                'bundleListUUID': iotUpdate.bundleListUUID
+            },
+          }).promise().then( result => {
+            logger.info("OK: " + JSON.stringify(result))
+            }).catch( err => {
+                logger.error("updIotUpdate err: " + err)
+                response.statusCode = 500
+                response.message = err
+                ret = false
+                if (err.code == 'ConditionalCheckFailedException') {
+                    response.statusCode = 404
+                    logger.info("delIotUpdate 404 Not Found")
+                }
+        })
+        return ret
+    }
+
     async updIotUpdate(iotUpdate: IotUpdate,  response: Response): Promise<boolean> {
         response.statusCode = 200
         response.message = 'OK'
@@ -71,10 +105,20 @@ export class IoTAccess {
               'createdAt' : iotUpdate.createdAt
             },
             ConditionExpression: 'createdAt = :createdAt',
-            UpdateExpression: "set lastSeen=:l, idList=:idL",
+            UpdateExpression: 
+              "set lastSeen=:lastSeen,"+
+              "bundleList=:bundleList,"+
+              "bundleListType=:bundleListType,"+
+              "bundleListDesc=:bundleListDesc,"+
+              "bundleListUUID=:bundleListUUID",
             ExpressionAttributeValues:{
-              ":l": iotUpdate.LastSeen,
-              ":idL": iotUpdate.bundleList,
+              ":lastSeen": iotUpdate.LastSeen,
+              //":id": iotUpdate.id,  //unlikely to see changes in ids
+              //":idType": iotUpdate.idType,
+              ":bundleList": iotUpdate.bundleList,
+              ":bundleListType": iotUpdate.bundleListType,
+              ":bundleListDesc": iotUpdate.bundleListDesc,
+              ":bundleListUUID": iotUpdate.bundleListUUID,
               ":createdAt": iotUpdate.createdAt
             },
             ReturnValues:"UPDATED_NEW"
@@ -85,6 +129,10 @@ export class IoTAccess {
                 response.statusCode = 500
                 response.message = err
                 ret = false
+                if (err.code == 'ConditionalCheckFailedException') {
+                    response.statusCode = 404
+                    logger.info("delIotUpdate 404 Not Found")
+                }
         })
         return ret
     }
@@ -99,13 +147,21 @@ export class IoTAccess {
             Key:{
                 'uuid' : iotUpdate.uuid,
                 'createdAt' : iotUpdate.createdAt
+            },
+            ConditionExpression: 'createdAt = :createdAt',
+            ExpressionAttributeValues:{
+                ":createdAt": iotUpdate.createdAt
             }
         }).promise().then( result=>{
-            logger.info("OK:"+result)
+            logger.info("OK:"+JSON.stringify(result))
         }).catch( err=>{
             response.statusCode = 500
             response.message = err
             ret = false
+            if (err.code == 'ConditionalCheckFailedException') {
+                response.statusCode = 404
+                logger.info("delIotUpdate 404 Not Found")
+            }
         })
         return ret
     }
