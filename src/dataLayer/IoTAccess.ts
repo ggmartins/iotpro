@@ -19,8 +19,7 @@ export class IoTAccess {
 
     constructor(
         private enableAWSX:boolean,  
-
-  //      private readonly IotIndex: string = iotIndex,      
+        //private readonly IotIndex: string = iotIndex,      
     ){
         if(this.enableAWSX)
         {

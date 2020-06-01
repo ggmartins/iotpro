@@ -11,5 +11,6 @@ export interface IotUpdate {
     bundleListUUID: Array<string>
     HasChanged?: Array<string>
     BundleListAdd?: Array<string>
-	BundleListDel?: Array<string>
+    BundleListDel?: Array<string>
+    attachmentUrl?: string
 }
