@@ -1,21 +1,17 @@
 import 'source-map-support/register'
 import * as AWS  from 'aws-sdk'
 import { createLogger } from '../../utils/logger'
+import { FileAccess } from '../../dataLayer/FileAccess'
 
 import { APIGatewayProxyEvent, APIGatewayProxyHandler, APIGatewayProxyResult } from 'aws-lambda'
 
 const docClient = new AWS.DynamoDB.DocumentClient()
 const iotTable = process.env.IOT_TABLE
 const idxTable = process.env.IOT_INDEX
-const bucketName = process.env.IMAGES_S3_BUCKET
-const urlExpiration = parseInt(process.env.SIGNED_URL_EXPIRATION)
 
 const logger = createLogger('uploadimg')
 
-const s3 = new AWS.S3({
-  signatureVersion: 'v4'
-})
-
+const fileAccess: FileAccess = new FileAccess(true)
 export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   const uuid = event.pathParameters.id
   logger.info(uuid);
@@ -48,7 +44,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
 
   if(statusCode==200){
     logger.info("getting url")
-    var url=getUploadUrl(uuid)
+    var url=fileAccess.getUploadUrl(uuid)
     var urlAtt=url.split('?')[0];
     logger.info("upload url:"+url)
     await docClient.update({TableName: iotTable,
@@ -86,19 +82,3 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
     })
   }
 }
-
-function getUploadUrl(id: string) {
-  return s3.getSignedUrl('putObject', {
-    Bucket: bucketName,
-    Key: id,
-    Expires: urlExpiration
-  })
-}
-
-/*import 'source-map-support/register'
-import { APIGatewayProxyEvent, APIGatewayProxyResult, APIGatewayProxyHandler } from 'aws-lambda'
-export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
-  const todoId = event.pathParameters.todoId
-  // TODO: Return a presigned URL to upload a file for a TODO item with the provided id
-  return undefined
-}*/
