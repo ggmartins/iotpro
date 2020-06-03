@@ -3,7 +3,8 @@
 #npm i serverless -g
 #npm i wscat -g
 #npm i elasticsearch
-npm i elasticsearch@^15.0.0 --save-dev #for serverless-offline
+npm i elasticsearch@latest
+#npm i elasticsearch@^15.0.0 --save-dev #for serverless-offline
 npm i typescript --save-dev
 npm i @types/node
 npm i source-map-support
@@ -23,8 +24,11 @@ npm i uuid
 npm i axios
 npm i aws-xray-sdk
 npm i @types/jest
-npm install aws-sdk@latest
-npm install serverless-offline@latest
-npm install serverless-s3-local@latest
-npm install uuid@latest
-npm install middy@latest
+npm i ts-loader@latest
+npm i aws-sdk@latest
+npm i serverless --save-dev
+npm i serverless-offline@latest --save-dev
+npm i serverless-s3-local@latest --save-dev
+npm i uuid@latest
+npm i middy@latest
+npm i @types/node@latest
