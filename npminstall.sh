@@ -24,6 +24,7 @@ npm i uuid
 npm i axios
 npm i aws-xray-sdk
 npm i @types/jest
+npm i typescript@latest
 npm i ts-loader@latest
 npm i aws-sdk@latest
 npm i serverless --save-dev
