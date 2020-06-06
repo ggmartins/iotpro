@@ -9,7 +9,7 @@ const XAWS = AWSXRay.captureAWS(AWS)
 const logger = createLogger('fileAccess')
 
 const S3_VERSION='v4'
-const bucketName = process.env.IMAGES_S3_BUCKET
+const bucketName = process.env.S3_BUCKET_PCAP
 const urlExpiration = parseInt(process.env.SIGNED_URL_EXPIRATION)
 
 export class FileAccess {

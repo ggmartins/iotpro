@@ -4,6 +4,8 @@ import { DocumentClient } from 'aws-sdk/clients/dynamodb'
 import { createLogger } from '../utils/logger'
 import { IotUpdate } from '../models/IotUpdate'
 import { Response } from '../models/Response'
+import { FileAccess } from './FileAccess'
+
 //import { Key } from '../models/Key'
 //import * as uuid from 'uuid'
 
@@ -11,7 +13,9 @@ import { Response } from '../models/Response'
 const logger = createLogger('iotAccess')
 
 const iotTable = process.env.IOT_TABLE
-//const iotIndex = process.env.IOT_INDEX
+const idxTable = process.env.IOT_INDEX
+
+const fileAccess: FileAccess = new FileAccess(false)
 
 export class IoTAccess {
     private readonly docClient: DocumentClient // = new AWS.DynamoDB.DocumentClient(),
@@ -163,6 +167,66 @@ export class IoTAccess {
             }
         })
         return ret
+    }
+
+    async getIotUpload(id: string, response: Response): Promise<string> {
+        response.statusCode = 200
+        response.message = 'OK'
+        var Items=[]
+        logger.info("checking id...")
+        await this.docClient
+        .query({
+          TableName: iotTable,
+          IndexName: idxTable,
+          KeyConditionExpression: '#uuid = :uuid',
+          ExpressionAttributeNames: {
+            '#uuid': 'uuid'
+          },
+          ExpressionAttributeValues: {
+            ':uuid': id
+          } 
+        })
+        .promise().then(function(result){
+          //logger.info("query.then")
+          Items = result.Items
+          if (Items.length == 0){
+            response.statusCode = 404
+            response.message = "Not found"
+          }
+        }).catch(err=>{
+          logger.error(err)
+          response.message = err
+          response.statusCode = 500
+        })
+        logger.info("updating id..")
+        if(response.statusCode==200){
+          logger.info("getting url")
+          var url=fileAccess.getUploadUrl(id)
+          var urlAtt=url.split('?')[0];
+          logger.info("upload url:"+url)
+          await this.docClient.update({TableName: iotTable,
+            Key:{
+              'uuid' : Items[0].uuid,
+              'createdAt' : Items[0].createdAt
+            },
+            UpdateExpression: "set #attachmentUrl = :a",
+            ExpressionAttributeNames: {
+              "#attachmentUrl": "attachmentUrl"
+            },
+            ExpressionAttributeValues:{
+              ":a":urlAtt,
+            },
+            ReturnValues:"UPDATED_NEW"
+          }).promise().then(function(){
+            logger.info("OK")
+          }).catch(err=>{
+            logger.error("error updating item: "+ err)
+            response.statusCode = 500
+            response.message = err
+          })
+          return url
+        }
+        return ''
     }
 }
         

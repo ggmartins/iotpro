@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -9,14 +10,13 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"path"
 	"os"
 	"os/exec"
+	"path"
 	"reflect"
 	"regexp"
 	"strings"
 	"time"
-	"bytes"
 
 	"github.com/google/uuid"
 	"gopkg.in/yaml.v3"
@@ -24,27 +24,33 @@ import (
 
 //Config monitor config
 type Config struct {
-	URL string `yaml:"url"`
-	KEY string `yaml:"key"`
+	URL    string `yaml:"url"`
+	KEY    string `yaml:"key"`
 	Status string `yaml:"status"`
+}
+
+//Upload post response
+type Upload struct {
+	Message   string `json:"message"`
+	UploadURL string `json:"uploadUrl"`
 }
 
 //IoTBundle status update, do not change
 type IoTBundle struct {
-	UUID             string   `yaml:"uuid" json:"uuid"`
-	CreatedAt        string   `yaml:"createdAt" json:"createdAt"`
-	ID               string   `yaml:"id" json:"id"`
-	IDType           string   `yaml:"idType" json:"idType"`
-	BundleList       []string `yaml:"bundleList,flow" json:"bundleList,flow"`
-	BundleListType   []string `yaml:"bundleListType,flow" json:"bundleListType,flow"`
+	UUID           string   `yaml:"uuid" json:"uuid"`
+	CreatedAt      string   `yaml:"createdAt" json:"createdAt"`
+	ID             string   `yaml:"id" json:"id"`
+	IDType         string   `yaml:"idType" json:"idType"`
+	BundleList     []string `yaml:"bundleList,flow" json:"bundleList,flow"`
+	BundleListType []string `yaml:"bundleListType,flow" json:"bundleListType,flow"`
 	//BundleListResolv []string `yaml:"bundleListResolv,flow" json:"bundleListResolv,flow"`
-	BundleListDesc   []string `yaml:"bundleListDesc,flow" json:"bundleListDesc,flow"`
-	BundleListUUID   []string `yaml:"bundleListUUID,flow" json:"bundleListUUID,flow"`
-	BundleListAdd    []string `yaml:"-" json:"bundleListAdd`
-	BundleListDel    []string `yaml:"-" json:"bundleListDel`
-	HasChanged       bool     `yaml:"-" json:"hasChanged`
-	LastSeen         string   `yaml:"-" json:"lastSeen`
-	Key				 string   //iotmon.config.yaml
+	BundleListDesc []string `yaml:"bundleListDesc,flow" json:"bundleListDesc,flow"`
+	BundleListUUID []string `yaml:"bundleListUUID,flow" json:"bundleListUUID,flow"`
+	BundleListAdd  []string `yaml:"-" json:"bundleListAdd`
+	BundleListDel  []string `yaml:"-" json:"bundleListDel`
+	HasChanged     bool     `yaml:"-" json:"hasChanged`
+	LastSeen       string   `yaml:"-" json:"lastSeen`
+	Key            string   //iotmon.config.yaml
 }
 
 const iotstatus = "./iotmon.status"
@@ -295,9 +301,9 @@ func getOUIMap(filePath string) map[string]string {
 func main() {
 	//lift https://blog.golang.org/go-maps-in-action
 	log.Printf("Initializing...\n")
-	var resp *http.Response 
+	var resp *http.Response
 	var err error
-	iotstatus_exist := true
+	iotstatusExist := true
 	config := Config{}
 	conffile, err := ioutil.ReadFile(iotconfigyaml)
 	if err != nil {
@@ -324,7 +330,7 @@ func main() {
 				}
 			}
 		}
-		iotstatus_exist = false
+		iotstatusExist = false
 	}
 	log.Println("Done.")
 
@@ -436,7 +442,7 @@ func main() {
 				iotBundle.HasChanged = true
 			}
 		}
-        iotBundle.CreatedAt = iotBundleOld.CreatedAt
+		iotBundle.CreatedAt = iotBundleOld.CreatedAt
 	}
 	iotBundle.LastSeen = time.Now().Format(time.RFC3339)
 	iotBundle.Key = config.KEY
@@ -444,29 +450,35 @@ func main() {
 	if err != nil {
 		fmt.Println("error:", err)
 	}
-    if config.Status == "enable" || config.Status == "enabled"{
-		if iotstatus_exist {
-            client := &http.Client{}
+	checkUpload := false
+	if config.Status == "enable" || config.Status == "enabled" {
+		if iotstatusExist {
+			/*client := &http.Client{}
 			u, err := url.Parse(config.URL)
+			u.Path = path.Join(u.Path, "status")
 			u.Path = path.Join(u.Path, iotBundle.UUID)
-		
+
 			req, err := http.NewRequest(http.MethodPut, u.String(), bytes.NewBuffer(jsonOut))
 			if err != nil {
 				panic(err)
 			}
-		
+
 			req.Header.Set("Content-Type", "application/json; charset=utf-8")
 			resp, err = client.Do(req)
 			if err != nil {
 				panic(err)
-			}
-
-			log.Printf("PUT Update %#v %s\n", resp.Status, bodyToString(resp.Body))
+			} else {
+				checkUpload = true
+			}*/
+			checkUpload = true
+			//log.Printf("PUT Update %#v %s\n", resp.Status, bodyToString(resp.Body))
 		} else {
-			resp, err = http.Post(config.URL,
+			u, err := url.Parse(config.URL)
+			u.Path = path.Join(u.Path, "status")
+			resp, err = http.Post(u.Path,
 				"application/json",
 				strings.NewReader(string(jsonOut)))
-			
+
 			if err != nil {
 				panic(err)
 			}
@@ -474,23 +486,24 @@ func main() {
 			log.Printf("POST Create %#v\n", resp.Status)
 
 			if resp.StatusCode == 200 {
-				_,err := os.Create(iotstatus)
+				_, err := os.Create(iotstatus)
 				if err != nil {
 					panic(err)
 				}
 			}
 		}
 	} else {
-		if iotstatus_exist {
+		if iotstatusExist {
 			client := &http.Client{}
 			u, err := url.Parse(config.URL)
+			u.Path = path.Join(u.Path, "status")
 			u.Path = path.Join(u.Path, iotBundle.UUID)
 
 			req, err := http.NewRequest(http.MethodDelete, u.String(), bytes.NewBuffer(jsonOut))
 			if err != nil {
 				panic(err)
 			}
-		
+
 			req.Header.Set("Content-Type", "application/json; charset=utf-8")
 			resp, err = client.Do(req)
 			if err != nil {
@@ -507,11 +520,42 @@ func main() {
 		}
 	}
 
-	/*fmt.Printf("%#v %s\n", resp, string(jsonOut))
-	if err != nil {
-		panic(err)
-	}*/
+	if checkUpload {
+		files, err := ioutil.ReadDir("./upload")
+		if err != nil {
+			log.Fatal(err)
+		}
 
+		for _, file := range files {
+			file.Name()
+			u, err := url.Parse(config.URL)
+			u.Path = path.Join(u.Path, "upload")
+			u.Path = path.Join(u.Path, iotBundle.UUID)
+			u.Path = path.Join(u.Path, "attachment")
+			resp, err = http.Get(u.String()) //,
+			//"application/json",
+			//strings.NewReader(string(jsonOut)))
+
+			if err != nil {
+				panic(err)
+			}
+
+			log.Printf("GET Upload %s %#v\n", u.Path, resp.Status)
+			decoder := json.NewDecoder(resp.Body)
+			var uploadResp Upload
+			err = decoder.Decode(&uploadResp)
+			if err != nil {
+				panic(err)
+			}
+
+			if resp.StatusCode == 200 {
+				log.Printf("%#v\n", uploadResp)
+			} else {
+				log.Printf("Message: %s\n", uploadResp.Message)
+			}
+
+		}
+	}
 }
 
 func bodyToString(body io.Reader) string {
@@ -522,4 +566,3 @@ func bodyToString(body io.Reader) string {
 	bodyString := string(bodyBytes)
 	return bodyString
 }
-

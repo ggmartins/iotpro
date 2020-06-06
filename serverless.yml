@@ -23,6 +23,7 @@ provider:
     IOT_INDEX: iotIdIndex-${self:provider.stage}
     S3_BUCKET_PCAP: serverless-iotpcap-${self:provider.stage}
     SIGNED_URL_EXPIRATION: 300
+    _X_AMZN_TRACE_ID: Root=1-5759e988-bd862e3fe1be46a994272793;Sampled=1
 
   iamRoleStatements:
     - Effect: Allow
@@ -85,7 +86,7 @@ functions:
     events:
       - http:
           method: put
-          path: iot/{id}
+          path: iot/status/{id}
           cors: true
           #authorizer: Auth #switched to simpler validation 
           documentation:
@@ -105,7 +106,7 @@ functions:
     events:
       - http:
           method: post
-          path: iot
+          path: iot/status
           cors: true
           #authorizer: Auth
           documentation:
@@ -125,7 +126,7 @@ functions:
     events:
       - http:
           method: delete
-          path: iot/{id}
+          path: iot/status/{id}
           cors: true
           #authorizer: Auth
           documentation:
@@ -144,8 +145,8 @@ functions:
     handler: src/lambda/http/generateUploadUrl.handler
     events:
       - http:
-          method: post
-          path: iot/{id}/attachment
+          method: get
+          path: iot/upload/{id}/attachment
           cors: true
           #authorizer: Auth
     iamRoleStatements:
