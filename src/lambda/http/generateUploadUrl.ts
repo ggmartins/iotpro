@@ -5,7 +5,7 @@ import { Response } from '../../models/Response'
 
 import { APIGatewayProxyEvent, APIGatewayProxyHandler, APIGatewayProxyResult } from 'aws-lambda'
 
-const iotAccess:IoTAccess = new IoTAccess(true)
+const iotAccess:IoTAccess = new IoTAccess(false)
 
 const logger = createLogger('uploading')
 

@@ -23,7 +23,8 @@ provider:
     IOT_INDEX: iotIdIndex-${self:provider.stage}
     S3_BUCKET_PCAP: serverless-iotpcap-${self:provider.stage}
     SIGNED_URL_EXPIRATION: 300
-    _X_AMZN_TRACE_ID: Root=1-5759e988-bd862e3fe1be46a994272793;Sampled=1
+    # this works for getting signed URL but not for uploading actually 
+    #_X_AMZN_TRACE_ID: Root=1-5759e988-bd862e3fe1be46a994272793;Sampled=1
 
   iamRoleStatements:
     - Effect: Allow
@@ -78,6 +79,19 @@ custom:
     #    schema: ${file(models/TodoUpdate.json)}
 
 functions:
+
+  webhook:
+    handler: src/offline/handler.webhook
+    events:
+      - http:
+        method: GET
+        path: /
+  s3hook:
+    handler: src/offline/handler.s3hook
+    events:
+      - s3: local-bucket
+        event: s3:*
+
   Auth:
     handler: src/lambda/auth/auth0Authorizer.handler
 
@@ -197,7 +211,7 @@ resources:
         NotificationConfiguration:
           TopicConfigurations:
             - Event: s3:ObjectCreated:Put
-              Topic: !Ref ImagesTopic
+              #Topic: !Ref ImagesTopic
         CorsConfiguration:
           CorsRules:
             -

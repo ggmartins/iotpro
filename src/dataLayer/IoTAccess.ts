@@ -1,5 +1,5 @@
 import * as AWS  from 'aws-sdk'
-import * as AWSXRay from 'aws-xray-sdk'
+//import * as AWSXRay from 'aws-xray-sdk'
 import { DocumentClient } from 'aws-sdk/clients/dynamodb'
 import { createLogger } from '../utils/logger'
 import { IotUpdate } from '../models/IotUpdate'
@@ -28,7 +28,7 @@ export class IoTAccess {
         if(this.enableAWSX)
         {
            logger.info('AWSX: enable')
-           const ddbClient = AWSXRay.captureAWSClient(new AWS.DynamoDB({
+           /*const ddbClient = AWSXRay.captureAWSClient(new AWS.DynamoDB({
                 region: 'localhost',
                 endpoint: 'http://localhost:3001',
                 accessKeyId: 'DEFAULT_ACCESS_KEY',
@@ -36,12 +36,17 @@ export class IoTAccess {
            }));
            this.docClient = new AWS.DynamoDB.DocumentClient({
                 service: ddbClient
-           });
+           });*/
         }
         else 
         {
             logger.info('AWSX: disable')
-            this.docClient = new AWS.DynamoDB.DocumentClient()
+            this.docClient = new AWS.DynamoDB.DocumentClient({
+                region: 'localhost',
+                endpoint: 'http://localhost:3001',
+                accessKeyId: 'DEFAULT_ACCESS_KEY',
+                secretAccessKey: 'DEFAULT_SECRET' 
+            })
         }
     }
 

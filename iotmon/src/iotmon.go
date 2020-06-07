@@ -8,11 +8,13 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"reflect"
 	"regexp"
 	"strings"
@@ -79,6 +81,54 @@ func DownloadFile(filepath string, url string) error {
 
 	// Write the body to file
 	_, err = io.Copy(out, resp.Body)
+	return err
+}
+
+//UploadFile lift from https://gist.github.com/mattetti/5914158
+func UploadFile(uri string, params map[string]string, formFile, path string) error {
+	file, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	part, err := writer.CreateFormFile(formFile, filepath.Base(path))
+	if err != nil {
+		return err
+	}
+	_, err = io.Copy(part, file)
+
+	for key, val := range params {
+		_ = writer.WriteField(key, val)
+	}
+	err = writer.Close()
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest("PUT", uri, body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	if err != nil {
+		log.Fatal(err)
+	}
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Fatal(err)
+	} else {
+		body := &bytes.Buffer{}
+		_, err := body.ReadFrom(resp.Body)
+		if err != nil {
+			log.Fatal(err)
+		}
+		resp.Body.Close()
+		fmt.Println(resp.StatusCode)
+		fmt.Println(resp.Header)
+
+		fmt.Println(body)
+	}
 	return err
 }
 
@@ -453,7 +503,7 @@ func main() {
 	checkUpload := false
 	if config.Status == "enable" || config.Status == "enabled" {
 		if iotstatusExist {
-			/*client := &http.Client{}
+			client := &http.Client{}
 			u, err := url.Parse(config.URL)
 			u.Path = path.Join(u.Path, "status")
 			u.Path = path.Join(u.Path, iotBundle.UUID)
@@ -469,8 +519,7 @@ func main() {
 				panic(err)
 			} else {
 				checkUpload = true
-			}*/
-			checkUpload = true
+			}
 			//log.Printf("PUT Update %#v %s\n", resp.Status, bodyToString(resp.Body))
 		} else {
 			u, err := url.Parse(config.URL)
@@ -527,7 +576,7 @@ func main() {
 		}
 
 		for _, file := range files {
-			file.Name()
+
 			u, err := url.Parse(config.URL)
 			u.Path = path.Join(u.Path, "upload")
 			u.Path = path.Join(u.Path, iotBundle.UUID)
@@ -539,8 +588,9 @@ func main() {
 			if err != nil {
 				panic(err)
 			}
-
-			log.Printf("GET Upload %s %#v\n", u.Path, resp.Status)
+			filepath := path.Join("./upload", file.Name())
+			temppath := path.Join("/tmp/uploaded", file.Name())
+			log.Printf("GET Uploading %s %s (%#v)\n", filepath, u.Path, resp.Status)
 			decoder := json.NewDecoder(resp.Body)
 			var uploadResp Upload
 			err = decoder.Decode(&uploadResp)
@@ -549,7 +599,16 @@ func main() {
 			}
 
 			if resp.StatusCode == 200 {
-				log.Printf("%#v\n", uploadResp)
+				log.Printf("%#v\n", uploadResp.UploadURL)
+				err = UploadFile(uploadResp.UploadURL, nil, "file", filepath)
+				if err != nil {
+					log.Fatal(err)
+				} else {
+					err := os.Rename(filepath, temppath)
+					if err != nil {
+						log.Fatal(err)
+					}
+				}
 			} else {
 				log.Printf("Message: %s\n", uploadResp.Message)
 			}

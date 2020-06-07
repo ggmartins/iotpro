@@ -7,7 +7,7 @@ import { IotUpdate } from '../../models/IotUpdate'
 import { IoTAccess } from '../../dataLayer/IoTAccess'
 import { createLogger } from '../../utils/logger'
 
-const iotAccess:IoTAccess = new IoTAccess(true)
+const iotAccess:IoTAccess = new IoTAccess(false)
 
 const logger = createLogger('updatestatus')
 var keys: Array<string> = null
