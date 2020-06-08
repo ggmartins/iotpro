@@ -95,7 +95,7 @@ export class IoTAccess {
                 ret = false
                 if (err.code == 'ConditionalCheckFailedException') {
                     response.statusCode = 404
-                    logger.info("delIotUpdate 404 Not Found")
+                    logger.info("pstIotUpdate 404 Not Found")
                 }
         })
         return ret
@@ -112,13 +112,16 @@ export class IoTAccess {
               'uuid' : iotUpdate.uuid,
               'createdAt' : iotUpdate.createdAt
             },
-            ConditionExpression: 'createdAt = :createdAt',
+            ConditionExpression: 'createdAt = :createdAt and #uuid = :uuid',
             UpdateExpression: 
               "set lastSeen=:lastSeen,"+
               "bundleList=:bundleList,"+
               "bundleListType=:bundleListType,"+
               "bundleListDesc=:bundleListDesc,"+
               "bundleListUUID=:bundleListUUID",
+            ExpressionAttributeNames: {
+                '#uuid': 'uuid'
+            },
             ExpressionAttributeValues:{
               ":lastSeen": iotUpdate.LastSeen,
               //":id": iotUpdate.id,  //unlikely to see changes in ids
@@ -127,7 +130,8 @@ export class IoTAccess {
               ":bundleListType": iotUpdate.bundleListType,
               ":bundleListDesc": iotUpdate.bundleListDesc,
               ":bundleListUUID": iotUpdate.bundleListUUID,
-              ":createdAt": iotUpdate.createdAt
+              ":createdAt": iotUpdate.createdAt,
+              ":uuid": iotUpdate.uuid
             },
             ReturnValues:"UPDATED_NEW"
           }).promise().then( result => {
@@ -139,7 +143,7 @@ export class IoTAccess {
                 ret = false
                 if (err.code == 'ConditionalCheckFailedException') {
                     response.statusCode = 404
-                    logger.info("delIotUpdate 404 Not Found")
+                    logger.info("updIotUpdate 404 Not Found")
                 }
         })
         return ret
@@ -156,9 +160,13 @@ export class IoTAccess {
                 'uuid' : iotUpdate.uuid,
                 'createdAt' : iotUpdate.createdAt
             },
-            ConditionExpression: 'createdAt = :createdAt',
+            ConditionExpression: 'createdAt = :createdAt and #uuid = :uuid',
+            ExpressionAttributeNames: {
+                '#uuid': 'uuid'
+            },
             ExpressionAttributeValues:{
-                ":createdAt": iotUpdate.createdAt
+                ":createdAt": iotUpdate.createdAt,
+                ":uuid": iotUpdate.uuid
             }
         }).promise().then( result=>{
             logger.info("OK:"+JSON.stringify(result))

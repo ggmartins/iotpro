@@ -86,6 +86,7 @@ func DownloadFile(filepath string, url string) error {
 
 //UploadFile lift from https://gist.github.com/mattetti/5914158
 func UploadFile(uri string, params map[string]string, formFile, path string) error {
+	var resp *http.Response
 	file, err := os.Open(path)
 	if err != nil {
 		return err
@@ -114,30 +115,36 @@ func UploadFile(uri string, params map[string]string, formFile, path string) err
 		log.Fatal(err)
 	}
 	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err = client.Do(req)
 	if err != nil {
 		log.Fatal(err)
 	} else {
 		body := &bytes.Buffer{}
-		_, err := body.ReadFrom(resp.Body)
+		_, err = body.ReadFrom(resp.Body)
 		if err != nil {
 			log.Fatal(err)
 		}
 		resp.Body.Close()
-		fmt.Println(resp.StatusCode)
-		fmt.Println(resp.Header)
 
-		fmt.Println(body)
+		if resp.StatusCode != 200 {
+			log.Printf("Error: %d", resp.StatusCode)
+			err = fmt.Errorf(fmt.Sprintf("%s", body))
+		} else {
+			log.Printf("URL Signed OK.")
+		}
 	}
 	return err
 }
 
-func fileExists(filename string) bool {
+func fileExists(filename string, fileOnly bool) bool {
 	info, err := os.Stat(filename)
 	if os.IsNotExist(err) {
 		return false
 	}
-	return !info.IsDir()
+	if fileOnly {
+		return !info.IsDir()
+	}
+	return true
 }
 
 //lift https://www.golangprograms.com/golang-program-for-implementation-of-levenshtein-distance.html
@@ -364,15 +371,15 @@ func main() {
 		panic(err)
 	}
 
-	if fileExists(ouiFileLocal) {
+	if fileExists(ouiFileLocal, true) {
 		//fmt.Println("Loading " + ouiFileLocal + ".")
 	} else {
 		DownloadFile(ouiFileLocal, ouiFileURL)
 	}
 
-	if !fileExists(iotstatus) {
+	if !fileExists(iotstatus, true) {
 		if config.Status == "enable" || config.Status == "enabled" {
-			if fileExists(iotstatusyaml) {
+			if fileExists(iotstatusyaml, true) {
 				log.Printf("INFO: NEW EXECUTION, renaming old %s to %s.\n", iotstatusyaml, iotstatusbkup)
 				err := os.Rename(iotstatusyaml, iotstatusbkup)
 				if err != nil {
@@ -385,7 +392,7 @@ func main() {
 	log.Println("Done.")
 
 	log.Printf("Using key: [%s]\n", config.KEY[:3]+"****"+config.KEY[len(config.KEY)-3:])
-	if !fileExists(ouiFileLocal) {
+	if !fileExists(ouiFileLocal, true) {
 		log.Panic("Unable to load " + ouiFileLocal)
 	}
 
@@ -498,7 +505,7 @@ func main() {
 	iotBundle.Key = config.KEY
 	jsonOut, err := json.Marshal(iotBundle)
 	if err != nil {
-		fmt.Println("error:", err)
+		log.Printf("error: %s\n", err)
 	}
 	checkUpload := false
 	if config.Status == "enable" || config.Status == "enabled" {
@@ -519,12 +526,13 @@ func main() {
 				panic(err)
 			} else {
 				checkUpload = true
+				log.Printf("PUT Status %#v", resp.Status)
 			}
 			//log.Printf("PUT Update %#v %s\n", resp.Status, bodyToString(resp.Body))
 		} else {
 			u, err := url.Parse(config.URL)
 			u.Path = path.Join(u.Path, "status")
-			resp, err = http.Post(u.Path,
+			resp, err = http.Post(u.String(),
 				"application/json",
 				strings.NewReader(string(jsonOut)))
 
@@ -588,9 +596,10 @@ func main() {
 			if err != nil {
 				panic(err)
 			}
+
 			filepath := path.Join("./upload", file.Name())
 			temppath := path.Join("/tmp/uploaded", file.Name())
-			log.Printf("GET Uploading %s %s (%#v)\n", filepath, u.Path, resp.Status)
+			log.Printf("GET Upload of %s %s (%#v)\n", filepath, u.Path, resp.Status)
 			decoder := json.NewDecoder(resp.Body)
 			var uploadResp Upload
 			err = decoder.Decode(&uploadResp)
@@ -599,12 +608,18 @@ func main() {
 			}
 
 			if resp.StatusCode == 200 {
-				log.Printf("%#v\n", uploadResp.UploadURL)
+				log.Printf("URL Signed: %#v\n", uploadResp.UploadURL)
 				err = UploadFile(uploadResp.UploadURL, nil, "file", filepath)
 				if err != nil {
 					log.Fatal(err)
 				} else {
-					err := os.Rename(filepath, temppath)
+					if !fileExists(temppath, false) {
+						err = os.Mkdir(temppath, 0755)
+						if err != nil {
+							log.Fatal(err)
+						}
+					}
+					err = os.Rename(filepath, temppath)
 					if err != nil {
 						log.Fatal(err)
 					}
@@ -612,7 +627,6 @@ func main() {
 			} else {
 				log.Printf("Message: %s\n", uploadResp.Message)
 			}
-
 		}
 	}
 }

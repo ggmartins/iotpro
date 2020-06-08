@@ -103,3 +103,27 @@ dynamodb.scan(params, function(err, data) {
     if (err) ppJson(err); // an error occurred
     else ppJson(data); // successful response
 });
+
+
+params = {
+    TableName: 'iot-dev',
+    Key:{
+      'uuid' : '66323a31-383a-4938-ba35-383a34323a36',
+      'createdAt' : '2020-06-07T19:57:41-05:00'
+    },
+    ConditionExpression: 'createdAt = :createdAt and #uuid = :uuid',
+    UpdateExpression: "set lastSeen=:lastSeen",
+    ExpressionAttributeNames: {
+        '#uuid': 'uuid'
+    },
+    ExpressionAttributeValues:{
+        ":lastSeen": "2020-06-07T19:20:59-05:00",
+        ":createdAt" : '2020-06-07T19:57:41-05:00',
+        ":uuid" : '66323a31-383a-4938-ba35-383a34323a36'
+    },
+    ReturnValues: "UPDATED_NEW"
+}
+docClient.update(params, function(err, data) {
+    if (err) ppJson(err); // an error occurred
+    else ppJson(data); // successful response
+});
