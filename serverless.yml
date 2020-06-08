@@ -94,6 +94,9 @@ functions:
 
   Auth:
     handler: src/lambda/auth/auth0Authorizer.handler
+  
+  AuthIoT:
+    handler: src/lambda/auth/authIoT.handler
 
   IoTPut:
     handler: src/lambda/http/updateStatus.handler
@@ -102,7 +105,9 @@ functions:
           method: put
           path: iot/status/{id}
           cors: true
-          #authorizer: Auth #switched to simpler validation 
+          authorizer: 
+            name: AuthIoT #switched to simpler validation
+            identitySource: method.request.header.Key
           documentation:
             summary: Update IoT Status
             description: Update IoT Status
@@ -122,7 +127,9 @@ functions:
           method: post
           path: iot/status
           cors: true
-          #authorizer: Auth
+          authorizer: 
+            name: AuthIoT #switched to simpler validation
+            identitySource: method.request.header.Key
           documentation:
             summary: Update IoT Status
             description: Update IoT Status
@@ -142,7 +149,9 @@ functions:
           method: delete
           path: iot/status/{id}
           cors: true
-          #authorizer: Auth
+          authorizer: 
+            name: AuthIoT #switched to simpler validation
+            identitySource: method.request.header.Key
           documentation:
             summary: Update IoT Status
             description: Update IoT Status
@@ -162,7 +171,9 @@ functions:
           method: get
           path: iot/upload/{id}/attachment
           cors: true
-          #authorizer: Auth
+          authorizer: 
+            name: AuthIoT #switched to simpler validation
+            identitySource: method.request.header.Key
     iamRoleStatements:
       - Effect: Allow
         Action:

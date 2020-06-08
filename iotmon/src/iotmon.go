@@ -516,10 +516,11 @@ func main() {
 			u.Path = path.Join(u.Path, iotBundle.UUID)
 
 			req, err := http.NewRequest(http.MethodPut, u.String(), bytes.NewBuffer(jsonOut))
+
 			if err != nil {
 				panic(err)
 			}
-
+			req.Header.Set("Key", iotBundle.Key)
 			req.Header.Set("Content-Type", "application/json; charset=utf-8")
 			resp, err = client.Do(req)
 			if err != nil {
@@ -530,12 +531,23 @@ func main() {
 			}
 			//log.Printf("PUT Update %#v %s\n", resp.Status, bodyToString(resp.Body))
 		} else {
+			client := &http.Client{}
 			u, err := url.Parse(config.URL)
 			u.Path = path.Join(u.Path, "status")
-			resp, err = http.Post(u.String(),
+			/*resp, err = http.Post(u.String(),
 				"application/json",
 				strings.NewReader(string(jsonOut)))
+			if err != nil {
+				panic(err)
+			}*/
 
+			req, err := http.NewRequest(http.MethodPost, u.String(), bytes.NewBuffer(jsonOut))
+			if err != nil {
+				panic(err)
+			}
+			req.Header.Set("Key", iotBundle.Key)
+			req.Header.Set("Content-Type", "application/json; charset=utf-8")
+			resp, err = client.Do(req)
 			if err != nil {
 				panic(err)
 			}
@@ -560,7 +572,7 @@ func main() {
 			if err != nil {
 				panic(err)
 			}
-
+			req.Header.Set("Key", iotBundle.Key)
 			req.Header.Set("Content-Type", "application/json; charset=utf-8")
 			resp, err = client.Do(req)
 			if err != nil {
@@ -568,9 +580,7 @@ func main() {
 			}
 
 			log.Printf("DEL Delete %#v %s\n", resp.Status, bodyToString(resp.Body))
-
-			os.Remove(iotstatus)
-
+			os.Remove(iotstatus) //disable request by removing status ("flag") file
 		} else {
 			log.Println("IoT Device Disabled.")
 			os.Exit(0)
