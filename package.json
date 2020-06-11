@@ -21,6 +21,7 @@
   },
   "devDependencies": {
     "aws-sdk": "^2.691.0",
+    "bcryptjs": "^2.4.3",
     "elasticsearch": "^16.7.1",
     "serverless": "^1.72.0",
     "serverless-aws-documentation": "^1.1.0",

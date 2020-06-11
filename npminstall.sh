@@ -33,3 +33,4 @@ npm i serverless-s3-local@latest --save-dev
 npm i uuid@latest
 npm i middy@latest
 npm i @types/node@latest
+npm i bcryptjs --save-dev

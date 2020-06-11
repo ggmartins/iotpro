@@ -18,7 +18,11 @@ provider:
   region: ${opt:region, 'us-east-1'}
 
   environment:
+    JWT_SECRET: ${file(config.${self:provider.stage}.json):JWT_SECRET}
+    KMS_SECRET: ${file(config.${self:provider.stage}.json):KMS_SECRET}
     AUTH0_JWKS_URL: 'https://XXXX.auth0.com/.well-known/jwks.json'
+    DEV_TABLE: dev-${self:provider.stage}
+    DEV_INDEX: devIdIndex-${self:provider.stage}
     IOT_TABLE: iot-${self:provider.stage}
     IOT_INDEX: iotIdIndex-${self:provider.stage}
     S3_BUCKET_PCAP: serverless-iotpcap-${self:provider.stage}
@@ -65,6 +69,7 @@ custom:
     seed:
       test:
         sources:
+          - table: usr-${self:provider.stage}
           - table: iot-${self:provider.stage}
             sources: [./dynamodb-seedtest.json]
   s3:
@@ -98,6 +103,16 @@ functions:
   AuthIoT:
     handler: src/lambda/auth/authIoT.handler
 
+  CreateDevice:
+    handler: src/lambda/http/createDevice.handler
+    events:
+      - http:
+          method: post
+          cors: true
+          path: dev
+          request:
+            schema:
+              application/json: ${file(src/schema/create_device_request.json)}
   IoTPut:
     handler: src/lambda/http/updateStatus.handler
     events:
@@ -250,6 +265,18 @@ resources:
               Action: 's3:GetObject'
               Resource: 'arn:aws:s3:::${self:provider.environment.S3_BUCKET_PCAP}/*'
         Bucket: !Ref BucketPcap
+    DEVTable:
+      Type: AWS::DynamoDB::Table
+      DeletionPolicy: Retain
+      Properties:
+        TableName: ${self:provider.environment.DEV_TABLE}
+        AttributeDefinitions:
+          - AttributeName: devname
+            AttributeType: S
+        KeySchema:
+          - AttributeName: devname
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
     IOTTable:
       Type: AWS::DynamoDB::Table
       Properties:

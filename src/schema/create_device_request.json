@@ -1,0 +1,25 @@
+  
+{
+    "definitions": {},
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "type": "object",
+    "title": "Create Device Schema",
+    "required": [
+      "devname",
+      "pssword"
+    ],
+    "properties": {
+      "devname": {
+        "title": "Device Name",
+        "type": "string",
+        "minLength": 3,
+        "maxLength": 60
+      },
+      "pssword": {
+        "title": "Password",
+        "type": "string",
+        "minLength": 6,
+        "maxLength": 60
+      }
+    }
+}

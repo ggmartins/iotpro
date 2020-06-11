@@ -534,12 +534,6 @@ func main() {
 			client := &http.Client{}
 			u, err := url.Parse(config.URL)
 			u.Path = path.Join(u.Path, "status")
-			/*resp, err = http.Post(u.String(),
-				"application/json",
-				strings.NewReader(string(jsonOut)))
-			if err != nil {
-				panic(err)
-			}*/
 
 			req, err := http.NewRequest(http.MethodPost, u.String(), bytes.NewBuffer(jsonOut))
 			if err != nil {
@@ -594,15 +588,19 @@ func main() {
 		}
 
 		for _, file := range files {
-
+			client := &http.Client{}
 			u, err := url.Parse(config.URL)
 			u.Path = path.Join(u.Path, "upload")
 			u.Path = path.Join(u.Path, iotBundle.UUID)
 			u.Path = path.Join(u.Path, "attachment")
-			resp, err = http.Get(u.String()) //,
-			//"application/json",
-			//strings.NewReader(string(jsonOut)))
 
+			req, err := http.NewRequest(http.MethodGet, u.String(), nil)
+			if err != nil {
+				panic(err)
+			}
+			req.Header.Set("Key", iotBundle.Key)
+			req.Header.Set("Content-Type", "application/json; charset=utf-8")
+			resp, err = client.Do(req)
 			if err != nil {
 				panic(err)
 			}
