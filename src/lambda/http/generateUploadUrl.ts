@@ -5,7 +5,7 @@ import { Response } from '../../models/Response'
 
 import { APIGatewayProxyEvent, APIGatewayProxyHandler, APIGatewayProxyResult } from 'aws-lambda'
 
-const iotAccess:IoTAccess = new IoTAccess(false)
+const iotAccess:IoTAccess = new IoTAccess(process.env.ENABLE_LOCAL == 'true')
 
 const logger = createLogger('uploading')
 
@@ -22,8 +22,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
     console.log(err+"")
     logger.error(err)
   })
-  
-  // TODO: Update a TODO item with the provided id using values in the "updatedTodo" object
+
   return {
     statusCode: res.statusCode,
     headers: {

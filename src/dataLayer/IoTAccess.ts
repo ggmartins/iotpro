@@ -20,32 +20,24 @@ const devTable = process.env.DEV_TABLE
 const iotTable = process.env.IOT_TABLE
 const idxTable = process.env.IOT_INDEX
 
-const fileAccess: FileAccess = new FileAccess(false)
+const fileAccess: FileAccess = new FileAccess(process.env.ENABLE_LOCAL == 'true')
 
 export class IoTAccess {
     private readonly docClient: DocumentClient // = new AWS.DynamoDB.DocumentClient(),
     private readonly IotTable: string = iotTable
     private readonly DevTable: string = devTable
     constructor(
-        private enableAWSX:boolean,  
+        private enableLocal:boolean,  
         //private readonly IotIndex: string = iotIndex,      
     ){
-        if(this.enableAWSX)
+        if(!this.enableLocal)
         {
-           logger.info('AWSX: enable')
-           /*const ddbClient = AWSXRay.captureAWSClient(new AWS.DynamoDB({
-                region: 'localhost',
-                endpoint: 'http://localhost:3001',
-                accessKeyId: 'DEFAULT_ACCESS_KEY',
-                secretAccessKey: 'DEFAULT_SECRET' 
-           }));
-           this.docClient = new AWS.DynamoDB.DocumentClient({
-                service: ddbClient
-           });*/
+           logger.info('Local: disable')
+           this.docClient = new AWS.DynamoDB.DocumentClient({})
         }
         else 
         {
-            logger.info('AWSX: disable')
+            logger.info('Local: enable')
             this.docClient = new AWS.DynamoDB.DocumentClient({
                 region: 'localhost',
                 endpoint: 'http://localhost:3001',
@@ -55,6 +47,7 @@ export class IoTAccess {
         }
     }
 
+    // Yes, this is a hardcoded "shared" password
     async cacheKeyProfiles(): Promise<string[]> {
         return ['dGhpc3NlY3JldGlzdG1wCg==']
     }

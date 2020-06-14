@@ -28,6 +28,7 @@ provider:
     S3_BUCKET_PCAP: serverless-iotpcap-${self:provider.stage}
     SIGNED_URL_EXPIRATION: 300
     BCRYPT_SALT: 10
+    ENABLE_LOCAL: true
     # this works for getting signed URL but not for uploading actually 
     #_X_AMZN_TRACE_ID: Root=1-5759e988-bd862e3fe1be46a994272793;Sampled=1
 

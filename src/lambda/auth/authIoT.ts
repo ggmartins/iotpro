@@ -3,7 +3,7 @@ import 'source-map-support/register'
 import { IoTAccess } from '../../dataLayer/IoTAccess'
 import * as jwt from 'jsonwebtoken'
 
-const iotAccess:IoTAccess = new IoTAccess(false)
+const iotAccess:IoTAccess = new IoTAccess(process.env.ENABLE_LOCAL == 'true')
 var keys: Array<string> = null
 import { createLogger } from '../../utils/logger'
 const logger = createLogger('authIoT')

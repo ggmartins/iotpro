@@ -8,7 +8,7 @@ import bcrypt from 'bcryptjs'
 import { APIGatewayProxyEvent, APIGatewayProxyHandler, APIGatewayProxyResult } from 'aws-lambda'
 
 const logger = createLogger('loginDevice')
-const iotAccess:IoTAccess = new IoTAccess(false)
+const iotAccess:IoTAccess = new IoTAccess(process.env.ENABLE_LOCAL == 'true')
 
 
 export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {

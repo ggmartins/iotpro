@@ -19,16 +19,19 @@ export class FileAccess {
         private enableAWSX:boolean,
         ){
             if(this.enableAWSX){
+                this.s3 = new AWS.S3({ 
+                    signatureVersion: S3_VERSION,
+                })
                /*this.s3 = new XAWS.S3({ 
                    signatureVersion: S3_VERSION,
                    s3ForcePathStyle: true,
                    accessKeyId: 'S3RVER', // This specific key is required when working offline
                    secretAccessKey: 'S3RVER',
                    endpoint: 'http://localhost:3010', //new AWS.Endpoint('http://localhost:3010')
-                   })*/
+                })*/
             } else {
-               this.s3 = new AWS.S3({ 
-                   signatureVersion: S3_VERSION,
+                this.s3 = new AWS.S3({ 
+                    signatureVersion: S3_VERSION,
                 })
             }
     }
