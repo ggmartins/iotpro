@@ -37,7 +37,6 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       event.pathParameters.hasOwnProperty('id')) {
       ID = event.pathParameters.id
   }
-  
 
   switch(event.httpMethod) {
     case("PUT"):

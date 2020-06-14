@@ -56,7 +56,7 @@ export class IoTAccess {
     }
 
     async cacheKeyProfiles(): Promise<string[]> {
-        return ['thissecretistmp']
+        return ['dGhpc3NlY3JldGlzdG1wCg==']
     }
 
     //SCAN TEST
@@ -113,8 +113,8 @@ export class IoTAccess {
     }
 
     async pstIotUpdate(iotUpdate: IotUpdate,  response: Response): Promise<boolean> {
-        response.statusCode = 200
-        response.message = 'OK'
+        response.statusCode = 201
+        response.message = 'Created'
         let ret = true
 
         logger.info("pstIotUpdate " + iotUpdate.uuid + " " + iotUpdate.createdAt)

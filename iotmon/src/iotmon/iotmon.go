@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -150,6 +151,20 @@ func fileExists(filename string, fileOnly bool) bool {
 		return !info.IsDir()
 	}
 	return true
+}
+
+func readFile(filename string) string {
+	var token string
+	iotstatusfile, err := os.Open(filename)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer iotstatusfile.Close()
+	scanner := bufio.NewScanner(iotstatusfile)
+	for scanner.Scan() {
+		token = scanner.Text()
+	}
+	return token
 }
 
 //lift https://www.golangprograms.com/golang-program-for-implementation-of-levenshtein-distance.html
@@ -506,6 +521,8 @@ func main() {
 		}
 		iotBundle.CreatedAt = iotBundleOld.CreatedAt
 	}
+
+	var token string
 	iotBundle.LastSeen = time.Now().Format(time.RFC3339)
 	iotBundle.Key = config.KEY
 	jsonOut, err := json.Marshal(iotBundle)
@@ -522,11 +539,12 @@ func main() {
 			u.Path = path.Join(u.Path, iotBundle.UUID)
 
 			req, err := http.NewRequest(http.MethodPut, u.String(), bytes.NewBuffer(jsonOut))
-
 			if err != nil {
 				panic(err)
 			}
-			req.Header.Set("Key", iotBundle.Key)
+			token = readFile(iotstatus)
+
+			req.Header.Set("Key", iotBundle.UUID+"|"+iotBundle.Key+"|"+token)
 			req.Header.Set("Content-Type", "application/json; charset=utf-8")
 			resp, err = client.Do(req)
 			if err != nil {
@@ -537,32 +555,48 @@ func main() {
 			}
 			//log.Printf("PUT Update %#v %s\n", resp.Status, bodyToString(resp.Body))
 		} else {
+			var password string
+			reader := bufio.NewReader(os.Stdin)
 			client := &http.Client{}
-
-			devAuth, err := json.Marshal(fmt.Sprintf("{ \"devname\":\"testdev\", \"pssword\":\"testdev\"}"))
+			fmt.Printf("Creating Device:%s\nPassword:", iotBundle.UUID)
+			password1, err := reader.ReadString('\n')
 			if err != nil {
-				log.Printf("error: %s\n", err)
+				log.Fatal("error: %s\n", err)
+			}
+			fmt.Printf("Repeat password:")
+			password2, err := reader.ReadString('\n')
+			if err != nil {
+				log.Fatal("error: %s\n", err)
+			}
+
+			if password1 != password2 {
+				log.Fatal("Error: passwords aren't matching. Exiting...\n")
+			}
+
+			password = base64.StdEncoding.EncodeToString([]byte(password1))
+
+			devAuth, err := json.Marshal(fmt.Sprintf("{ \"devname\":\"%s\", \"pssword\":\"%s\"}",
+				iotBundle.UUID, password))
+			if err != nil {
+				log.Fatal("error: %s\n", err)
 			}
 			u, err := url.Parse(config.URL)
 			u.Path = path.Join(u.Path, "dev")
 
 			req, err := http.NewRequest(http.MethodPost, u.String(), bytes.NewBuffer(devAuth))
 			if err != nil {
-				panic(err)
+				log.Fatal(err)
 			}
-			req.Header.Set("Key", iotBundle.Key)
+			req.Header.Set("Key", iotBundle.UUID+"|"+iotBundle.Key+"|")
 			req.Header.Set("Content-Type", "application/json") //;charset=utf-8
 			resp, err = client.Do(req)
 			if err != nil {
-				panic(err)
+				log.Fatal(err)
 			}
 			log.Printf("POST Device Create %#v\n", resp.Status)
 			if resp.StatusCode == 201 {
-				/*_, err := os.Create(iotstatus)
-				if err != nil {
-					panic(err)
-				}*/
-				devAuth, err := json.Marshal(fmt.Sprintf("{ \"devname\":\"testdev\", \"pssword\":\"testdev\"}"))
+				devAuth, err := json.Marshal(fmt.Sprintf("{ \"devname\":\"%s\", \"pssword\":\"%s\"}",
+					iotBundle.UUID, password))
 				if err != nil {
 					log.Printf("error: %s\n", err)
 				}
@@ -572,56 +606,59 @@ func main() {
 
 				req, err := http.NewRequest(http.MethodPost, u.String(), bytes.NewBuffer(devAuth))
 				if err != nil {
-					panic(err)
+					log.Fatal(err)
 				}
-				req.Header.Set("Key", iotBundle.Key)
+				req.Header.Set("Key", iotBundle.UUID+"|"+iotBundle.Key+"|")
 				req.Header.Set("Content-Type", "application/json") //;charset=utf-8
 				resp, err = client.Do(req)
 				if err != nil {
-					panic(err)
+					log.Fatal(err)
 				} else {
 					if resp.StatusCode == 200 {
-						var token Message
+						var message Message
 						messagetoken := bodyToString(resp.Body)
-						log.Printf("Token: %#v %s\n", resp.Status, messagetoken[:20])
-						err = json.Unmarshal([]byte(messagetoken), &token)
+						log.Printf("Token: %#v %s...\"\n", resp.Status, messagetoken[:15])
+						err = json.Unmarshal([]byte(messagetoken), &message)
 						if err != nil {
-							panic(err)
+							log.Fatal(err)
 						}
+						statusfile, err := os.Create(iotstatus)
+						if err != nil {
+							log.Fatal(err)
+						}
+						token = message.Message
+						statusfile.WriteString(token)
 					} else {
-						log.Fatal("Failed to login: %#v %s\n", resp.Status, bodyToString(resp.Body))
+						log.Printf("Failed to login: %#v %s\n", resp.Status, bodyToString(resp.Body))
+						log.Fatal("Exiting...")
 					}
 				}
 			} else {
 				log.Printf("Error: %s\n", bodyToString(resp.Body))
+				log.Fatal("Exiting...")
 			}
 
-			/*u, err = url.Parse(config.URL)
+			u, err = url.Parse(config.URL)
 			u.Path = path.Join(u.Path, "iot")
 			u.Path = path.Join(u.Path, "status")
 
 			req, err = http.NewRequest(http.MethodPost, u.String(), bytes.NewBuffer(jsonOut))
 			if err != nil {
-				panic(err)
+				log.Fatal(err)
 			}
-			req.Header.Set("Key", iotBundle.Key)
-			req.Header.Set("Content-Type", "application/json; charset=utf-8")
+			req.Header.Set("Key", iotBundle.UUID+"|"+iotBundle.Key+"|"+token)
+			req.Header.Set("Content-Type", "application/json") //; charset=utf-8
 			resp, err = client.Do(req)
 			if err != nil {
-				panic(err)
+				log.Fatal(err)
 			}
 
-			log.Printf("POST Status Create %#v\n", resp.Status)*/
-
-			//if resp.StatusCode == 201 {
-			/*_, err := os.Create(iotstatus)
-			if err != nil {
-				panic(err)
-			}*/
-			//log.Printf("Token: %s\n", bodyToString(resp.Body))
-			//} else {
-			log.Printf("Error: %s\n", bodyToString(resp.Body))
-			//}
+			if resp.StatusCode == 201 {
+				log.Printf("POST Status Created. %#v\n", resp.Status)
+			} else {
+				log.Printf("POST Status Create Failed %#v %s\n", resp.Status, bodyToString(resp.Body))
+				os.Remove(iotstatus)
+			}
 		}
 	} else {
 		if iotstatusExist {
@@ -630,16 +667,16 @@ func main() {
 			u.Path = path.Join(u.Path, "iot")
 			u.Path = path.Join(u.Path, "status")
 			u.Path = path.Join(u.Path, iotBundle.UUID)
-
+			token = readFile(iotstatus)
 			req, err := http.NewRequest(http.MethodDelete, u.String(), bytes.NewBuffer(jsonOut))
 			if err != nil {
-				panic(err)
+				log.Fatal(err)
 			}
-			req.Header.Set("Key", iotBundle.Key)
+			req.Header.Set("Key", iotBundle.UUID+"|"+iotBundle.Key+"|"+token)
 			req.Header.Set("Content-Type", "application/json; charset=utf-8")
 			resp, err = client.Do(req)
 			if err != nil {
-				panic(err)
+				log.Fatal(err)
 			}
 
 			log.Printf("DEL Delete %#v %s\n", resp.Status, bodyToString(resp.Body))
@@ -671,7 +708,7 @@ func main() {
 			if err != nil {
 				panic(err)
 			}
-			req.Header.Set("Key", iotBundle.Key)
+			req.Header.Set("Key", iotBundle.UUID+"|"+iotBundle.Key+"|"+token)
 			req.Header.Set("Content-Type", "application/json; charset=utf-8")
 			resp, err = client.Do(req)
 			if err != nil {
