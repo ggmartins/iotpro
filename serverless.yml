@@ -27,6 +27,7 @@ provider:
     IOT_INDEX: iotIdIndex-${self:provider.stage}
     S3_BUCKET_PCAP: serverless-iotpcap-${self:provider.stage}
     SIGNED_URL_EXPIRATION: 300
+    BCRYPT_SALT: 10
     # this works for getting signed URL but not for uploading actually 
     #_X_AMZN_TRACE_ID: Root=1-5759e988-bd862e3fe1be46a994272793;Sampled=1
 
@@ -84,7 +85,6 @@ custom:
     #    schema: ${file(models/TodoUpdate.json)}
 
 functions:
-
   webhook:
     handler: src/offline/handler.webhook
     events:
@@ -108,11 +108,39 @@ functions:
     events:
       - http:
           method: post
-          cors: true
           path: dev
+          cors: true
+          authorizer: 
+            name: AuthIoT #switched to simpler validation
+            identitySource: method.request.header.Key
           request:
             schema:
               application/json: ${file(src/schema/create_device_request.json)}
+    iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:PutItem
+      Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.DEV_TABLE}
+
+  LoginDevice:
+    handler: src/lambda/http/loginDevice.handler
+    events:
+      - http:
+          method: post
+          path: dev/login
+          cors: true
+          authorizer: 
+            name: AuthIoT #switched to simpler validation
+            identitySource: method.request.header.Key
+          request:
+            schema:
+              application/json: ${file(src/schema/create_device_request.json)}
+    iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+      Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.DEV_TABLE}
+
   IoTPut:
     handler: src/lambda/http/updateStatus.handler
     events:

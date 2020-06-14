@@ -4,14 +4,19 @@ import { DocumentClient } from 'aws-sdk/clients/dynamodb'
 import { createLogger } from '../utils/logger'
 import { IotUpdate } from '../models/IotUpdate'
 import { Response } from '../models/Response'
+import { DeviceCreate } from '../models/DeviceCreate'
 import { FileAccess } from './FileAccess'
+import bcrypt from 'bcryptjs'
 
 //import { Key } from '../models/Key'
 //import * as uuid from 'uuid'
 
+const bcrypt_salt = parseInt(process.env.BCRYPT_SALT)
+
 //const XAWS = AWSXRay.captureAWS(AWS)
 const logger = createLogger('iotAccess')
 
+const devTable = process.env.DEV_TABLE
 const iotTable = process.env.IOT_TABLE
 const idxTable = process.env.IOT_INDEX
 
@@ -20,7 +25,7 @@ const fileAccess: FileAccess = new FileAccess(false)
 export class IoTAccess {
     private readonly docClient: DocumentClient // = new AWS.DynamoDB.DocumentClient(),
     private readonly IotTable: string = iotTable
-
+    private readonly DevTable: string = devTable
     constructor(
         private enableAWSX:boolean,  
         //private readonly IotIndex: string = iotIndex,      
@@ -67,11 +72,51 @@ export class IoTAccess {
             response.message = err
     })*/
 
+    async pstDevice(devicename: string, password: string, response: Response): Promise<boolean> {
+        await this.docClient.put({
+            TableName: this.DevTable,
+            Item: {
+                devname: devicename,
+                pssword: bcrypt.hashSync(password, bcrypt_salt)
+            }
+        }).promise().then(()=>{
+            logger.info("pstDevice: device created")
+        }).catch(err => {
+            response.statusCode = 500
+            response.message = err
+            logger.error(err)
+            return false
+        })
+        return true
+    }
+
+    async qryDevice(devicename: string, response: Response): Promise<DeviceCreate> {
+        var ret: DeviceCreate = null
+        await this.docClient.query({
+            TableName: this.DevTable,
+            KeyConditionExpression: '#devname = :devname',
+            ExpressionAttributeNames: {
+              '#devname': 'devname'
+            },
+            ExpressionAttributeValues: {
+              ':devname': devicename
+            }
+        }).promise().then((result)=>{
+            ret = { devname: result.Items[0].devname, pssword: result.Items[0].pssword }
+            logger.info("qryDevice: device found ("+ret.devname+")")
+        }).catch(err => {
+            response.statusCode = 500
+            response.message = err
+            logger.error(err)
+        })
+        return ret
+    }
 
     async pstIotUpdate(iotUpdate: IotUpdate,  response: Response): Promise<boolean> {
         response.statusCode = 200
         response.message = 'OK'
         let ret = true
+
         logger.info("pstIotUpdate " + iotUpdate.uuid + " " + iotUpdate.createdAt)
 
         await this.docClient.put({TableName: this.IotTable,
@@ -87,9 +132,9 @@ export class IoTAccess {
                 'bundleListUUID': iotUpdate.bundleListUUID
             },
           }).promise().then( result => {
-            logger.info("OK: " + JSON.stringify(result))
+            logger.info("pstIotUpdate OK: " + JSON.stringify(result))
             }).catch( err => {
-                logger.error("updIotUpdate err: " + err)
+                logger.error("pstIotUpdate err: " + err)
                 response.statusCode = 500
                 response.message = err
                 ret = false
@@ -101,11 +146,18 @@ export class IoTAccess {
         return ret
     }
 
-    async updIotUpdate(iotUpdate: IotUpdate,  response: Response): Promise<boolean> {
+    async updIotUpdate(uuid: string, iotUpdate: IotUpdate,  response: Response): Promise<boolean> {
         response.statusCode = 200
         response.message = 'OK'
         let ret = true
-        logger.info("updIotUpdate " + iotUpdate.uuid + " " + iotUpdate.createdAt)
+        
+        logger.info("updIotUpdate " + uuid + ":" + iotUpdate.uuid + " " + iotUpdate.createdAt)
+
+        if (uuid != iotUpdate.uuid) { //sanity check
+            response.statusCode = 400
+            response.message = 'Invalid uuid'
+            return false 
+        }
 
         await this.docClient.update({TableName: this.IotTable,
             Key:{
@@ -135,7 +187,7 @@ export class IoTAccess {
             },
             ReturnValues:"UPDATED_NEW"
           }).promise().then( result => {
-            logger.info("OK: " + JSON.stringify(result))
+            logger.info("updIotUpdate OK: " + JSON.stringify(result))
             }).catch( err => {
                 logger.error("updIotUpdate err: " + err)
                 response.statusCode = 500

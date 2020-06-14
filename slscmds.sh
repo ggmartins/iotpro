@@ -4,4 +4,4 @@
 #SLS_DEBUG=* sls dynamodb migrate --stage dev 
 #sls plugin install --name serverless-offline
 #sls plugin install --name serverless-s3-local
-#sls offline
+#SLS_DEBUG=* sls offline

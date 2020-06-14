@@ -1,33 +1,22 @@
-import * as AWS  from 'aws-sdk'
-import bcrypt from 'bcryptjs'
 import { DeviceCreate } from '../../models/DeviceCreate'
-import { DocumentClient } from 'aws-sdk/clients/dynamodb'
 import { Response } from '../../models/Response'
 import { createLogger } from '../../utils/logger'
+import { IoTAccess } from '../../dataLayer/IoTAccess'
 
 import { APIGatewayProxyEvent, APIGatewayProxyHandler, APIGatewayProxyResult } from 'aws-lambda'
 
 const logger = createLogger('createDevice')
+const iotAccess:IoTAccess = new IoTAccess(false)
+
 
 export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
-  var res : Response = { statusCode: 200, message: 'OK' }
+  var res : Response = { statusCode: 201, message: 'OK' }
   const body:DeviceCreate = JSON.parse(event.body)
-  const devname = body.devname
-  const pssword = body.pssword
 
-  const docClient : DocumentClient = new AWS.DynamoDB.DocumentClient()
-  await docClient.put({
-            TableName: process.env.DEV_TABLE,
-            Item: {
-              devname: devname,
-              password: bcrypt.hashSync(pssword, 10)
-            }
-    }).promise().then(()=>{
-        logger.info("device created")
-    }).catch(err => {
-        res.statusCode = 501
-        res.message = err
-  })
+  logger.info("body: " + JSON.stringify(event.body))
+  
+  await iotAccess.pstDevice(body.devname, body.pssword, res)
+  logger.info(res.message)
 
   return {
     statusCode: res.statusCode,

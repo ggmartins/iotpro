@@ -10,11 +10,10 @@ import { createLogger } from '../../utils/logger'
 const iotAccess:IoTAccess = new IoTAccess(false)
 
 const logger = createLogger('updatestatus')
-var keys: Array<string> = null
 
 //{ statusCode: 401, message: 'Unauthorized' };
 //{ statusCode: 501, message: 'Not Implemented' }
-function getResponse(res : Response){
+/*function getResponse(res : Response){
   return {
     statusCode: res.statusCode,
     headers: {
@@ -25,7 +24,7 @@ function getResponse(res : Response){
       response: res.message
     })
   }
-}
+}*/
 
 //https://stackoverflow.com/questions/60099777/in-a-apigatewayproxyevent-what-field-will-give-me-the-url
 export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
@@ -39,35 +38,11 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       ID = event.pathParameters.id
   }
   
-  logger.info("ID: "+ID)
-  //TODO: move to authorizer
-  if (!keys) {
-    await iotAccess.cacheKeyProfiles().then(k=>{
-      keys = k
-    }).catch(e => {
-      console.log(e)
-      return getResponse({ statusCode: 501, message: 'Not Implemented'})
-    })
-  }
-
-  console.log("INFO: keys: " + keys)
-  console.log("INFO: key: " + JSON.stringify(iotUpdate))
-
-  if(iotUpdate !== null &&
-     iotUpdate.hasOwnProperty('Key') &&
-     keys.includes(iotUpdate.Key)) {
-    console.log("INFO: Key Validated")
-  } else return getResponse({ statusCode: 401, message: 'Unauthorized' })
-
-  //logger.info("updateStatus: " + JSON.stringify(event.httpMethod))
-  
-  //const updRequest: UpdateRequest = JSON.parse(event.body)
-  //logger.info('updateStatus')
 
   switch(event.httpMethod) {
     case("PUT"):
       console.log("Processing PUT...")
-      await iotAccess.updIotUpdate(iotUpdate, res)
+      await iotAccess.updIotUpdate(ID, iotUpdate, res)
     break;
     case("DELETE"):
       console.log("Processing DELETE...")

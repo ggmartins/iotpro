@@ -127,3 +127,18 @@ docClient.update(params, function(err, data) {
     if (err) ppJson(err); // an error occurred
     else ppJson(data); // successful response
 });
+
+params = {
+    TableName: 'dev-dev',
+    KeyConditionExpression: '#devname = :devname',
+    ExpressionAttributeNames: {
+      '#devname': 'devname'
+    },
+    ExpressionAttributeValues: {
+      ':devname': 'testdev'
+    }
+}
+docClient.query(params, function(err, data) {
+    if (err) ppJson(err); // an error occurred
+    else ppJson(data); // successful response
+})
