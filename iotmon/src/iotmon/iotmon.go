@@ -37,14 +37,9 @@ type Upload struct {
 	UploadURL string `json:"uploadUrl"`
 }
 
-//Token post response
-type Token struct {
-	Token string `json:"token"`
-}
-
 //Message post response
 type Message struct {
-	Message Token `json:"message"`
+	Message string `json:"message"`
 }
 
 //IoTBundle status update, do not change
@@ -556,7 +551,7 @@ func main() {
 				panic(err)
 			}
 			req.Header.Set("Key", iotBundle.Key)
-			req.Header.Set("Content-Type", "application/json; charset=utf-8")
+			req.Header.Set("Content-Type", "application/json") //;charset=utf-8
 			resp, err = client.Do(req)
 			if err != nil {
 				panic(err)
@@ -580,16 +575,16 @@ func main() {
 					panic(err)
 				}
 				req.Header.Set("Key", iotBundle.Key)
-				req.Header.Set("Content-Type", "application/json; charset=utf-8")
+				req.Header.Set("Content-Type", "application/json") //;charset=utf-8
 				resp, err = client.Do(req)
 				if err != nil {
 					panic(err)
 				} else {
 					if resp.StatusCode == 200 {
-						var message Message
+						var token Message
 						messagetoken := bodyToString(resp.Body)
-						log.Printf("Token: %#v %s\n", resp.Status, messagetoken)
-						err = json.Unmarshal([]byte(messagetoken), &message)
+						log.Printf("Token: %#v %s\n", resp.Status, messagetoken[:20])
+						err = json.Unmarshal([]byte(messagetoken), &token)
 						if err != nil {
 							panic(err)
 						}

@@ -27,7 +27,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
                 devname: result.devname
             }, process.env.JWT_SECRET)
             res.statusCode = 200
-            res.message = JSON.stringify({ token: token })
+            res.message = token 
             logger.info("token generated.")
         } else {
             res.statusCode = 404
