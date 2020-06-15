@@ -164,6 +164,28 @@ functions:
         - dynamodb:PutItem
       Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.IOT_TABLE}
 
+  IoTGet:
+    handler: src/lambda/http/updateStatus.handler
+    events:
+      - http:
+          method: get
+          path: iot/status/{id}
+          cors: true
+          authorizer: 
+            name: AuthIoT #switched to simpler validation
+            identitySource: method.request.header.Key
+          documentation:
+            summary: Get IoT Status
+            description: Get IoT Status
+            reqValidatorName: RequestBodyValidator
+            requestModels:
+              'application/typescript': UpdateRequest
+    iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+      Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.IOT_TABLE}
+
   IoTPost:
     handler: src/lambda/http/updateStatus.handler
     events:

@@ -558,12 +558,12 @@ func main() {
 			var password string
 			reader := bufio.NewReader(os.Stdin)
 			client := &http.Client{}
-			fmt.Printf("Creating Device:%s\nPassword:", iotBundle.UUID)
+			fmt.Printf("Creating Device:%s\nNew password:", iotBundle.UUID)
 			password1, err := reader.ReadString('\n')
 			if err != nil {
 				log.Fatal("error: %s\n", err)
 			}
-			fmt.Printf("Repeat password:")
+			fmt.Printf("Repeat new password:")
 			password2, err := reader.ReadString('\n')
 			if err != nil {
 				log.Fatal("error: %s\n", err)
@@ -746,6 +746,27 @@ func main() {
 				log.Printf("Message: %s\n", uploadResp.Message)
 			}
 		}
+	} //checkUpload
+
+	client := &http.Client{}
+	u, err := url.Parse(config.URL)
+	u.Path = path.Join(u.Path, "iot")
+	u.Path = path.Join(u.Path, "status")
+	u.Path = path.Join(u.Path, iotBundle.UUID)
+
+	req, err := http.NewRequest(http.MethodGet, u.String(), nil)
+	if err != nil {
+		panic(err)
+	}
+	token = readFile(iotstatus)
+
+	req.Header.Set("Key", iotBundle.UUID+"|"+iotBundle.Key+"|"+token)
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+	resp, err = client.Do(req)
+	if err != nil {
+		panic(err)
+	} else {
+		log.Printf("GET Status %#v\n%s\n", resp.Status, bodyToString(resp.Body))
 	}
 }
 

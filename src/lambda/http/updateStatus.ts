@@ -52,7 +52,8 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       await iotAccess.pstIotUpdate(iotUpdate, res)
     break;
     case("GET"): //TODO move this to "getStatus"
-      console.log("GET:"+event.httpMethod)
+      console.log("Processing GET...")
+      await iotAccess.getIotUpdate(ID, res)
     break;
     default:
   }

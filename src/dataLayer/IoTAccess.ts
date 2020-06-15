@@ -139,6 +139,44 @@ export class IoTAccess {
         return ret
     }
 
+    async getIotUpdate(uuid: string, response: Response): Promise<boolean> {
+      response.statusCode = 200
+      response.message = 'OK'
+      let ret = true
+      
+      logger.info("updIotUpdate " + uuid) //":" + iotUpdate.uuid + " " + iotUpdate.createdAt)
+
+      /*if (uuid != iotUpdate.uuid) { //sanity check
+          response.statusCode = 400
+          response.message = 'Invalid uuid'
+          return false 
+      }*/
+
+      await this.docClient.query({TableName: this.IotTable,
+          KeyConditionExpression: '#uuid = :uuid',//'createdAt = :createdAt and #uuid = :uuid',
+          ExpressionAttributeNames: {
+              '#uuid': 'uuid'
+          },
+          ExpressionAttributeValues:{
+            ":uuid": uuid
+          },
+        }).promise().then( result => {
+          logger.info("getIotUpdate OK: " + JSON.stringify(result))
+          response.message = JSON.stringify(result)
+          }).catch( err => {
+              logger.error("getIotUpdate err: " + err)
+              response.statusCode = 500
+              response.message = err
+              ret = false
+              if (err.code == 'ConditionalCheckFailedException') {
+                  response.statusCode = 404
+                  logger.info("getIotUpdate 404 Not Found")
+              }
+      })
+      return ret
+   }
+
+
     async updIotUpdate(uuid: string, iotUpdate: IotUpdate,  response: Response): Promise<boolean> {
         response.statusCode = 200
         response.message = 'OK'
