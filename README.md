@@ -5,9 +5,9 @@
 # iotpro
  Serverless Application for IoT Device Managing and Profiling
  
-![Slide1](https://github.com/ggmartins/iotpro/blob/master/images/slide1.jpg?raw=true)<br />
-![Slide2](https://github.com/ggmartins/iotpro/blob/master/images/slide2.jpg?raw=true)<br />
-![Slide3](https://github.com/ggmartins/iotpro/blob/master/images/slide3.jpg?raw=true)<br />
+![Slide1](https://github.com/ggmartins/iotpro/blob/master/images/slide1.png?raw=true)<br />
+![Slide2](https://github.com/ggmartins/iotpro/blob/master/images/slide2.png?raw=true)<br />
+![Slide3](https://github.com/ggmartins/iotpro/blob/master/images/slide3.png?raw=true)<br />
 
 ### Build & Deploy
 
