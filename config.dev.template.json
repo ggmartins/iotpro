@@ -1,4 +1,5 @@
 {
  "JWT_SECRET" : "",
- "KMS_SECRET" : ""
+ "KMS_SECRET" : "",
+ "SHARED_KEY" : ""
 }

@@ -1,6 +1,36 @@
 # iotpro
  Serverless Application for IoT Device Managing and Profiling
 
+
+# iotpro
+ Serverless Application for IoT Device Managing and Profiling
+ 
+![Slide1](https://github.com/ggmartins/iotpro/blob/master/images/slide1.jpg?raw=true)<br />
+![Slide2](https://github.com/ggmartins/iotpro/blob/master/images/slide2.jpg?raw=true)<br />
+![Slide3](https://github.com/ggmartins/iotpro/blob/master/images/slide3.jpg?raw=true)<br />
+
+### Build & Deploy
+
+#### Serverless Backend
+- <b>npm install</b>
+
+- <b>edit config.dev.json</b> (add password to JWS_TOKEN and SHARED_KEY, both can be base64 encoded of plain text
+
+- <b>SLS_DEBUG=* sls deploy</b>
+
+- <b>Offline</b><br />
+enable ENABLE_LOCAL in <b>serverless.yml</b> <br />
+SLS_DEBUG=* sls offline</b> (offline execution) <br />
+sls dynamodb start --seed test --migrate</b> (offline execution) <br />
+
+#### iotmon Golang Client
+
+cd iotmon/src/iotmon <br />
+make dep && make <br />
+edit iotmon.config.json (adjust url, shared key to match SHARED_KEY in the server, and status: enable <br />
+./iotmon<br />
+
+
 ```
 Serverless API local deployment:
 

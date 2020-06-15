@@ -16,9 +16,11 @@ const bcrypt_salt = parseInt(process.env.BCRYPT_SALT)
 //const XAWS = AWSXRay.captureAWS(AWS)
 const logger = createLogger('iotAccess')
 
-const devTable = process.env.DEV_TABLE
-const iotTable = process.env.IOT_TABLE
-const idxTable = process.env.IOT_INDEX
+const devTable: string = process.env.DEV_TABLE
+const iotTable: string = process.env.IOT_TABLE
+const idxTable: string = process.env.IOT_INDEX
+
+const sharedKey: string = process.env.SHARED_KEY
 
 const fileAccess: FileAccess = new FileAccess(process.env.ENABLE_LOCAL == 'true')
 
@@ -49,7 +51,7 @@ export class IoTAccess {
 
     // Yes, this is a hardcoded "shared" password
     async cacheKeyProfiles(): Promise<string[]> {
-        return ['dGhpc3NlY3JldGlzdG1wCg==']
+        return [sharedKey]
     }
 
     //SCAN TEST

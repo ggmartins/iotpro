@@ -2,14 +2,13 @@ service:
   name: serverless-iotlab
 
 plugins:
-  - serverless-webpack
+  #- serverless-webpack
   - serverless-iam-roles-per-function
   - serverless-reqvalidator-plugin
   - serverless-aws-documentation
   - serverless-offline
   - serverless-dynamodb-local
-  - serverless-s3-local #https://www.npmjs.com/package/serverless-s3-local
-
+  - serverless-s3-local
 provider:
   name: aws
   #runtime: nodejs12 #https://github.com/dherault/serverless-offline/issues/381
@@ -20,8 +19,9 @@ provider:
   environment:
     JWT_SECRET: ${file(config.${self:provider.stage}.json):JWT_SECRET}
     KMS_SECRET: ${file(config.${self:provider.stage}.json):KMS_SECRET}
+    SHARED_KEY: ${file(config.${self:provider.stage}.json):KEY_SECRET}
     AUTH0_JWKS_URL: 'https://XXXX.auth0.com/.well-known/jwks.json'
-    DEV_TABLE: dev-${self:provider.stage}
+    DEV_TABLE: devdb-${self:provider.stage}
     DEV_INDEX: devIdIndex-${self:provider.stage}
     IOT_TABLE: iot-${self:provider.stage}
     IOT_INDEX: iotIdIndex-${self:provider.stage}
@@ -74,29 +74,28 @@ custom:
           - table: usr-${self:provider.stage}
           - table: iot-${self:provider.stage}
             sources: [./dynamodb-seedtest.json]
+
+# Uncomment below for offline emulation <-----------------
+
   s3:
     port: 3010
     directory: /tmp 
-  #models:
-    #  - name: TodoRequest
-    #    contentType: application/json
-    #    schema: ${file(models/TodoItem.json)} # TODO change to 'requests/CreateTodoRequest.ts'
-    #  - name: TudoUpdateRequest
-    #    contentType: application/json
-    #    schema: ${file(models/TodoUpdate.json)}
 
-functions:
-  webhook:
-    handler: src/offline/handler.webhook
-    events:
-      - http:
-        method: GET
-        path: /
-  s3hook:
-    handler: src/offline/handler.s3hook
-    events:
-      - s3: local-bucket
-        event: s3:*
+# Uncomment below for offline emulation <-----------------
+
+# TODO: doesn't seem to work, check latest serverless-s3-local ver
+#functions:
+#  webhook:
+#    handler: src/offline/handler.webhook
+#    events:
+#      - http:
+#        method: GET
+#        path: /
+#  s3hook:
+#    handler: src/offline/handler.s3hook
+#    events:
+#      - s3: local-bucket
+#        event: s3:*
 
   Auth:
     handler: src/lambda/auth/auth0Authorizer.handler
@@ -261,24 +260,24 @@ functions:
 resources:
   Resources:
     #### API Gateway & Request Body Validation #############
-    GatewayResponseDefault4XX: #Edge Optimized
-      Type: AWS::ApiGateway::GatewayResponse
-      Properties:
-        ResponseParameters:
-          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
-          gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-          gatewayresponse.header.Access-Control-Allow-Methods: "'GET,POST,DELETE,PATCH,OPTIONS'"
-        ResponseType: DEFAULT_4XX
-        RestApiId:
-          Ref: ApiGatewayRestApi
-    RequestBodyValidator:
-      Type: AWS::ApiGateway::RequestValidator
-      Properties:
-        Name: 'request-body-validator'
-        RestApiId:
-          Ref: ApiGatewayRestApi
-        ValidateRequestBody: true
-        ValidateRequestParameters: false
+    #GatewayResponseDefault4XX: #Edge Optimized
+    #  Type: AWS::ApiGateway::GatewayResponse
+    #  Properties:
+    #    ResponseParameters:
+    #      gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+    #      gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+    #      gatewayresponse.header.Access-Control-Allow-Methods: "'GET,POST,DELETE,PATCH,OPTIONS'"
+    #    ResponseType: DEFAULT_4XX
+    #    RestApiId:
+    #      Ref: ApiGatewayRestApi
+    #RequestBodyValidator:
+    #  Type: AWS::ApiGateway::RequestValidator
+    #  Properties:
+    #    Name: 'request-body-validator'
+    #    RestApiId:
+    #      Ref: ApiGatewayRestApi
+    #    ValidateRequestBody: true
+    #    ValidateRequestParameters: false
     #### .pcap File Bucket ############
     BucketPcap:
       Type: AWS::S3::Bucket
@@ -288,7 +287,7 @@ resources:
         NotificationConfiguration:
           TopicConfigurations:
             - Event: s3:ObjectCreated:Put
-              #Topic: !Ref ImagesTopic
+              Topic: !Ref PcapsTopic
         CorsConfiguration:
           CorsRules:
             -
@@ -316,6 +315,7 @@ resources:
               Action: 's3:GetObject'
               Resource: 'arn:aws:s3:::${self:provider.environment.S3_BUCKET_PCAP}/*'
         Bucket: !Ref BucketPcap
+    
     DEVTable:
       Type: AWS::DynamoDB::Table
       DeletionPolicy: Retain
@@ -328,6 +328,7 @@ resources:
           - AttributeName: devname
             KeyType: HASH
         BillingMode: PAY_PER_REQUEST
+
     IOTTable:
       Type: AWS::DynamoDB::Table
       Properties:
@@ -355,3 +356,27 @@ resources:
                 KeyType: RANGE
             Projection:
               ProjectionType: ALL # What attributes will be copied to an index
+
+    SNSTopicPolicy:
+      Type: AWS::SNS::TopicPolicy
+      Properties:
+        PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                AWS: "*"
+              Action: sns:Publish
+              Resource:
+                !Ref PcapsTopic
+              Condition:
+                ArnLike:
+                  AWS:SourceArn: arn:aws:s3:::${self:provider.environment.S3_BUCKET_PCAP}
+        Topics:
+          - !Ref PcapsTopic
+
+    PcapsTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        DisplayName: Image bucket topic
+        TopicName: ${self:custom.topicName}
