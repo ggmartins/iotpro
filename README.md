@@ -9,14 +9,11 @@
 
 #### Serverless Backend
 - <b>npm install</b>
-
-- <b>edit config.dev.json</b> (add password to JWS_TOKEN and SHARED_KEY, both can be base64 encoded of plain text
-
+- <b>edit config.dev.json</b> (copy from template config.template.dev.json adding password to JWS_TOKEN and SHARED_KEY, both can be base64 encoded of plain text
 - <b>SLS_DEBUG=* sls deploy</b>
-
 - <b>Offline</b><br />
 enable ENABLE_LOCAL in <b>serverless.yml</b> <br />
-SLS_DEBUG=* sls offline</b> (offline execution) <br />
+SLS_DEBUG=* sls offline start</b> (offline execution) <br />
 sls dynamodb start --seed test --migrate</b> (offline execution) <br />
 
 #### iotmon Golang Client

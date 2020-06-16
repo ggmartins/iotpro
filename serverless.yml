@@ -2,7 +2,7 @@ service:
   name: serverless-iotlab
 
 plugins:
-  #- serverless-webpack
+  - serverless-webpack
   - serverless-iam-roles-per-function
   - serverless-reqvalidator-plugin
   - serverless-aws-documentation
@@ -19,7 +19,7 @@ provider:
   environment:
     JWT_SECRET: ${file(config.${self:provider.stage}.json):JWT_SECRET}
     KMS_SECRET: ${file(config.${self:provider.stage}.json):KMS_SECRET}
-    SHARED_KEY: ${file(config.${self:provider.stage}.json):KEY_SECRET}
+    SHARED_KEY: ${file(config.${self:provider.stage}.json):SHARED_KEY}
     AUTH0_JWKS_URL: 'https://XXXX.auth0.com/.well-known/jwks.json'
     DEV_TABLE: devdb-${self:provider.stage}
     DEV_INDEX: devIdIndex-${self:provider.stage}
@@ -46,6 +46,8 @@ provider:
       Resource: arn:aws:s3:::${self:provider.environment.S3_BUCKET_PCAP}/*
 
 custom:
+  webpack:
+    webpackConfig: ./webpack/webpack.config.js
   topicName: pcapUploadTopic-${self:provider.stage}
   documentation:
     api:
@@ -71,7 +73,6 @@ custom:
     seed:
       test:
         sources:
-          - table: usr-${self:provider.stage}
           - table: iot-${self:provider.stage}
             sources: [./dynamodb-seedtest.json]
 
