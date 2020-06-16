@@ -1,3 +1,4 @@
+#sls create --template aws-nodejs-typescript --path iotpro
 #sls dynamodb install
 #sls dynamodb start --migrate
 #sls dynamodb start --seed test
