@@ -1,34 +1,80 @@
 service:
-  name: serverless-iotlab
+  name: iotpro
+# app and org for use with dashboard.serverless.com
+#app: your-app-name
+#org: your-org-name
 
+custom:
+  webpack:
+    webpackConfig: ./webpack.config.js
+    includeModules: true
+  topicName: pcapUploadTopic-${self:provider.stage}
+  documentation:
+    api:
+      info:
+        version: v0.0.1
+        title: IoT Device Managing and Profiling 
+        description: Serverless Application for IoT Device Managing and Profiling
+    models:
+      - name: UpdateRequest
+        contentType: application/json
+        schema: ${file(models/IotUpdate.json)}
+
+  ### OFFLINE ###
+  serverless-offline:
+    #port: 8001 #3001?
+  dynamodb:
+    stages:
+      - ${self:provider.stage}
+    start:
+      port: 3001 #overridden by obj init  
+      inMemory: true
+      migrate: true
+      seed: true
+    seed:
+      test:
+        sources:
+          - table: iot-${self:provider.stage}
+            sources: [./dynamodb-seedtest.json]
+  s3:
+    port: 3010 #overridden by obj init 
+    directory: /tmp 
+  ### //OFFLINE
+
+# Add the serverless-webpack plugin
 plugins:
   - serverless-webpack
   - serverless-iam-roles-per-function
-  - serverless-reqvalidator-plugin
   - serverless-aws-documentation
+  - serverless-reqvalidator-plugin
   - serverless-offline
-  - serverless-dynamodb-local
   - serverless-s3-local
+  - serverless-dynamodb-local
 provider:
   name: aws
-  #runtime: nodejs12 #https://github.com/dherault/serverless-offline/issues/381
+  runtime: nodejs12.x
 
   stage: ${opt:stage, 'dev'}
   region: ${opt:region, 'us-east-1'}
 
+  #TODO: https://seed.run/blog/how-to-enable-access-logs-for-api-gateway.html#:~:text=To%20view%20API%20Gateway%20logs,by%20the%20last%20event%20time.
+  apiGateway:
+    minimumCompressionSize: 1024 # Enable gzip compression for responses > 1 KB
   environment:
+    AWS_NODEJS_CONNECTION_REUSE_ENABLED: 1
+
     JWT_SECRET: ${file(config.${self:provider.stage}.json):JWT_SECRET}
-    KMS_SECRET: ${file(config.${self:provider.stage}.json):KMS_SECRET}
     SHARED_KEY: ${file(config.${self:provider.stage}.json):SHARED_KEY}
-    AUTH0_JWKS_URL: 'https://XXXX.auth0.com/.well-known/jwks.json'
-    DEV_TABLE: devdb-${self:provider.stage}
+    #KMS_SECRET: ${file(config.${self:provider.stage}.json):KMS_SECRET}
+    #AUTH0_JWKS_URL: 'https://XXXX.auth0.com/.well-known/jwks.json'
+    DEV_TABLE: dev-${self:provider.stage} #table for device login information
     DEV_INDEX: devIdIndex-${self:provider.stage}
-    IOT_TABLE: iot-${self:provider.stage}
+    IOT_TABLE: iot-${self:provider.stage} #table for device status update
     IOT_INDEX: iotIdIndex-${self:provider.stage}
     S3_BUCKET_PCAP: serverless-iotpcap-${self:provider.stage}
     SIGNED_URL_EXPIRATION: 300
     BCRYPT_SALT: 10
-    ENABLE_LOCAL: true
+    ENABLE_LOCAL: false
     # this works for getting signed URL but not for uploading actually 
     #_X_AMZN_TRACE_ID: Root=1-5759e988-bd862e3fe1be46a994272793;Sampled=1
 
@@ -45,61 +91,10 @@ provider:
         - s3:GetObject
       Resource: arn:aws:s3:::${self:provider.environment.S3_BUCKET_PCAP}/*
 
-custom:
-  webpack:
-    webpackConfig: ./webpack/webpack.config.js
-  topicName: pcapUploadTopic-${self:provider.stage}
-  documentation:
-    api:
-      info:
-        version: v0.0.1
-        title: IoT Device Managing and Profiling 
-        description: Serverless Application for IoT Device Managing and Profiling
-    models:
-      - name: UpdateRequest
-        contentType: application/typescript
-        schema: models/IotUpdate.ts #${file(models/IotUpdate.json)}
+functions:
 
-  serverless-offline:
-    port: 8001 #3000?
-  dynamodb:
-    stages:
-      - ${self:provider.stage}
-    start:
-      port: 3001
-      inMemory: true
-      migrate: true
-      seed: true
-    seed:
-      test:
-        sources:
-          - table: iot-${self:provider.stage}
-            sources: [./dynamodb-seedtest.json]
-
-# Uncomment below for offline emulation <-----------------
-
-  s3:
-    port: 3010
-    directory: /tmp 
-
-# Uncomment below for offline emulation <-----------------
-
-# TODO: doesn't seem to work, check latest serverless-s3-local ver
-#functions:
-#  webhook:
-#    handler: src/offline/handler.webhook
-#    events:
-#      - http:
-#        method: GET
-#        path: /
-#  s3hook:
-#    handler: src/offline/handler.s3hook
-#    events:
-#      - s3: local-bucket
-#        event: s3:*
-
-  Auth:
-    handler: src/lambda/auth/auth0Authorizer.handler
+  #Auth:
+  #  handler: src/lambda/auth/auth0Authorizer.handler
   
   AuthIoT:
     handler: src/lambda/auth/authIoT.handler
@@ -161,7 +156,7 @@ custom:
     iamRoleStatements:
     - Effect: Allow
       Action:
-        - dynamodb:PutItem
+        - dynamodb:UpdateItem
       Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.IOT_TABLE}
 
   IoTGet:
@@ -260,6 +255,31 @@ custom:
 
 resources:
   Resources:
+
+    PcapsTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        DisplayName: Pcap bucket topic
+        TopicName: ${self:custom.topicName}
+
+    SNSTopicPolicy:
+      Type: AWS::SNS::TopicPolicy
+      Properties:
+        PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                AWS: "*"
+              Action: sns:Publish
+              Resource:
+                !Ref PcapsTopic
+              Condition:
+                ArnLike:
+                  AWS:SourceArn: arn:aws:s3:::${self:provider.environment.S3_BUCKET_PCAP}
+        Topics:
+          - !Ref PcapsTopic
+
     #### API Gateway & Request Body Validation #############
     #GatewayResponseDefault4XX: #Edge Optimized
     #  Type: AWS::ApiGateway::GatewayResponse
@@ -280,6 +300,7 @@ resources:
     #    ValidateRequestBody: true
     #    ValidateRequestParameters: false
     #### .pcap File Bucket ############
+
     BucketPcap:
       Type: AWS::S3::Bucket
       DependsOn: SNSTopicPolicy
@@ -303,20 +324,7 @@ resources:
                 - DELETE
                 - HEAD
               MaxAge: 3000
-    BucketPolicy:
-      Type: AWS::S3::BucketPolicy
-      Properties:
-        PolicyDocument:
-          Id: BucketPcapPolicy
-          Version: "2012-10-17"
-          Statement:
-            - Sid: PublicReadForGetBucketObjects
-              Effect: Allow
-              Principal: '*'
-              Action: 's3:GetObject'
-              Resource: 'arn:aws:s3:::${self:provider.environment.S3_BUCKET_PCAP}/*'
-        Bucket: !Ref BucketPcap
-    
+
     DEVTable:
       Type: AWS::DynamoDB::Table
       DeletionPolicy: Retain
@@ -357,27 +365,20 @@ resources:
                 KeyType: RANGE
             Projection:
               ProjectionType: ALL # What attributes will be copied to an index
+              
+    BucketPolicy:
+        Type: AWS::S3::BucketPolicy
+        Properties:
+          PolicyDocument:
+            Id: BucketPcapPolicy
+            Version: "2012-10-17"
+            Statement:
+              - Sid: PublicReadForGetBucketObjects
+                Effect: Allow
+                Principal: '*'
+                Action: 's3:GetObject'
+                Resource: 'arn:aws:s3:::${self:provider.environment.S3_BUCKET_PCAP}/*'
+          Bucket: !Ref BucketPcap
 
-    SNSTopicPolicy:
-      Type: AWS::SNS::TopicPolicy
-      Properties:
-        PolicyDocument:
-          Version: "2012-10-17"
-          Statement:
-            - Effect: Allow
-              Principal:
-                AWS: "*"
-              Action: sns:Publish
-              Resource:
-                !Ref PcapsTopic
-              Condition:
-                ArnLike:
-                  AWS:SourceArn: arn:aws:s3:::${self:provider.environment.S3_BUCKET_PCAP}
-        Topics:
-          - !Ref PcapsTopic
 
-    PcapsTopic:
-      Type: AWS::SNS::Topic
-      Properties:
-        DisplayName: Image bucket topic
-        TopicName: ${self:custom.topicName}
+ 

@@ -126,10 +126,23 @@ export class IoTAccess {
                 'bundleListDesc': iotUpdate.bundleListDesc,
                 'bundleListUUID': iotUpdate.bundleListUUID
             },
-          }).promise().then( result => {
-            logger.info("pstIotUpdate OK: " + JSON.stringify(result))
-            }).catch( err => {
+            }).promise().then( result => {
+                logger.info("pstIotUpdate OK: " + JSON.stringify(result))
+            }).catch( err => { //resource not found for the offline plugin
+                /*console.log(JSON.stringify({Item:{
+                  'uuid': iotUpdate.uuid,
+                  'id': iotUpdate.id,
+                  'idType': iotUpdate.idType,
+                  'createdAt': iotUpdate.createdAt,
+                  'lastSeen': iotUpdate.LastSeen,
+                  'bundleList': iotUpdate.bundleList,
+                  'bundleListType': iotUpdate.bundleListType,
+                  'bundleListDesc': iotUpdate.bundleListDesc,
+                  'bundleListUUID': iotUpdate.bundleListUUID
+                }}))*/
+                //logger.error("pstIotUpdate err: " +  this.IotTable)
                 logger.error("pstIotUpdate err: " + err)
+                //logger.error("pstIotUpdate err: " + JSON.stringify(iotUpdate))
                 response.statusCode = 500
                 response.message = err
                 ret = false

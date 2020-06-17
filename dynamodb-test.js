@@ -142,3 +142,12 @@ docClient.query(params, function(err, data) {
     if (err) ppJson(err); // an error occurred
     else ppJson(data); // successful response
 })
+
+var params = {
+    TableName: 'iot-dev',
+    Item:{"uuid":"66303a31-383a-4938-ba38-353a64353a31","id":"f0:18:98:85:d5:1f","idType":"mac","createdAt":"2020-06-17T18:13:42-05:00","lastSeen":"2020-06-17T18:13:42-05:00","bundleList":["05ac:027a","05ac:8103","05ac:8262","05ac:8514","05ac:8233"],"bundleListType":["usb","usb","usb","usb","usb"],"bundleListDesc":["Apple Inc. Apple T2 Bus","Apple Inc. Headset","Apple Inc. Ambient Light Sensor","Apple Inc. FaceTime HD Camera (Built-in)","Apple Inc. Apple T2 Controller"],"bundleListUUID":["30356163-3a30-4237-a130-3561633a3032","30356163-3a38-4130-b330-3561633a3831","30356163-3a38-4236-b230-3561633a3832","30356163-3a38-4531-b430-3561633a3835","30356163-3a38-4233-b330-3561633a3832"]}
+};
+docClient.put(params, function(err, data) {
+    if (err) ppJson(err); // an error occurred
+    else ppJson(data); // successful response
+});

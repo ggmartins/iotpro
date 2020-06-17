@@ -1,16 +1,20 @@
 {
-    "compilerOptions": {
-      "lib": [
-        "es2019"
-      ],
-      "moduleResolution": "node",
-      "noUnusedLocals": true,
-      "noUnusedParameters": true,
-      "sourceMap": true,
-      "target": "es2019",
-      "outDir": "lib"
-    },
-    "exclude": [
-      "node_modules"
-    ]
-  }
+  "compilerOptions": {
+    "lib": ["es2017"],
+    "removeComments": true,
+    "moduleResolution": "node",
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "sourceMap": true,
+    "target": "es2017",
+    "outDir": "lib"
+  },
+  "include": ["./**/*.ts"],
+  "exclude": [
+    "node_modules/**/*",
+    ".serverless/**/*",
+    ".webpack/**/*",
+    "_warmup/**/*",
+    ".vscode/**/*"
+  ]
+}

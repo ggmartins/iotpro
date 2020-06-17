@@ -38,7 +38,7 @@ export const handler = async (event: CustomAuthorizerEvent): Promise<CustomAutho
   logger.info("uuid:" + uuid + " key:" + key + " token:" + token)
 
   //if (!event.requestContext.resourcePath.startsWith("/dev")) {
-  if (!event.methodArn.endsWith('/dev')) {
+  if (!event.methodArn.endsWith('/dev') && !event.methodArn.endsWith('/dev/login')) {
     if (typeof token === 'undefined') return deny
     let decodedJwt = jwt.verify(token, process.env.JWT_SECRET)
 

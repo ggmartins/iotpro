@@ -16,23 +16,19 @@ export class FileAccess {
     private readonly s3 //TODO type?
     private readonly BucketName: string = bucketName
     constructor(
-        private enableAWSX:boolean,
+        private enableLocal:boolean,
         ){
-            if(this.enableAWSX){
+            if(!this.enableLocal){
                 this.s3 = new AWS.S3({ 
                     signatureVersion: S3_VERSION,
                 })
-               /*this.s3 = new XAWS.S3({ 
-                   signatureVersion: S3_VERSION,
-                   s3ForcePathStyle: true,
-                   accessKeyId: 'S3RVER', // This specific key is required when working offline
-                   secretAccessKey: 'S3RVER',
-                   endpoint: 'http://localhost:3010', //new AWS.Endpoint('http://localhost:3010')
-                })*/
             } else {
-                this.s3 = new AWS.S3({ 
-                    signatureVersion: S3_VERSION,
-                })
+                this.s3 = new AWS.S3(process.env.IS_OFFLINE ? {
+                    s3ForcePathStyle: true,
+                    endpoint: "http://localhost:8000",
+                    accessKeyId: "S3RVER", // This keys are required
+                    secretAccessKey: "S3RVER", // This keys are required
+                  } : {})
             }
     }
     async delObject(name: string, res:Response): Promise<void> {
