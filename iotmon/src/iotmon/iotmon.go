@@ -43,6 +43,12 @@ type Message struct {
 	Message string `json:"message"`
 }
 
+//Login
+type Login struct {
+	Devname string `json:"devname"`
+	Pssword string `json:"pssword"`
+}
+
 //IoTBundle status update, do not change
 type IoTBundle struct {
 	UUID           string   `yaml:"uuid" json:"uuid"`
@@ -575,8 +581,7 @@ func main() {
 
 			password = base64.StdEncoding.EncodeToString([]byte(password1))
 
-			devAuth, err := json.Marshal(fmt.Sprintf("{ \"devname\":\"%s\", \"pssword\":\"%s\"}",
-				iotBundle.UUID, password))
+			devAuth, err := json.Marshal(Login{Devname: iotBundle.UUID, Pssword: password})
 			if err != nil {
 				log.Fatal("error: %s\n", err)
 			}
@@ -588,15 +593,14 @@ func main() {
 				log.Fatal(err)
 			}
 			req.Header.Set("Key", iotBundle.UUID+"|"+iotBundle.Key+"|")
-			req.Header.Set("Content-Type", "application/json") //;charset=utf-8
+			req.Header.Set("Content-Type", "application/json;") //;charset=utf-8
 			resp, err = client.Do(req)
 			if err != nil {
 				log.Fatal(err)
 			}
 			log.Printf("POST Device Create %#v\n", resp.Status)
 			if resp.StatusCode == 201 {
-				devAuth, err := json.Marshal(fmt.Sprintf("{ \"devname\":\"%s\", \"pssword\":\"%s\"}",
-					iotBundle.UUID, password))
+				devAuth, err := json.Marshal(Login{Devname: iotBundle.UUID, Pssword: password})
 				if err != nil {
 					log.Printf("error: %s\n", err)
 				}
@@ -609,7 +613,7 @@ func main() {
 					log.Fatal(err)
 				}
 				req.Header.Set("Key", iotBundle.UUID+"|"+iotBundle.Key+"|")
-				req.Header.Set("Content-Type", "application/json") //;charset=utf-8
+				req.Header.Set("Content-Type", "application/json;") //;charset=utf-8
 				resp, err = client.Do(req)
 				if err != nil {
 					log.Fatal(err)
@@ -681,6 +685,7 @@ func main() {
 
 			log.Printf("DEL Delete %#v %s\n", resp.Status, bodyToString(resp.Body))
 			os.Remove(iotstatus) //disable request by removing status ("flag") file
+			os.Exit(0)
 		} else {
 			log.Println("IoT Device Disabled.")
 			os.Exit(0)
@@ -766,7 +771,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	} else {
-		log.Printf("GET Status %#v\n%s\n", resp.Status, bodyToString(resp.Body))
+		status := strings.Replace(bodyToString(resp.Body), "\\", "", -1)
+		log.Printf("GET Status %#v\n%s\n", resp.Status, status)
 	}
 }
 

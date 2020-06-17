@@ -13,7 +13,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
   var res : Response = { statusCode: 201, message: 'OK' }
   const body:DeviceCreate = JSON.parse(event.body)
 
-  logger.info("body: " + JSON.stringify(JSON.parse(event.body)))
+  logger.info("body: " + JSON.stringify(event.body))
 
   await iotAccess.pstDevice(body.devname, body.pssword, res)
   logger.info(res.message)

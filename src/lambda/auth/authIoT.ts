@@ -23,7 +23,7 @@ const deny = {
 }
 
 export const handler = async (event: CustomAuthorizerEvent): Promise<CustomAuthorizerResult> => {
-  
+  logger.info("event: " + JSON.stringify(event))
   var str: string[] = event.authorizationToken.split("|", 3)
 
   if (str.length != 3) {
@@ -34,11 +34,11 @@ export const handler = async (event: CustomAuthorizerEvent): Promise<CustomAutho
   const key:string = str[1]   //"shared key"
   const token:string = str[2]
 
-  logger.info("event:" + JSON.stringify(event))
-  logger.info("uuid:" + uuid)
-  logger.info("token:" + token)
+  //logger.info("event:" + JSON.stringify(event))
+  logger.info("uuid:" + uuid + " key:" + key + " token:" + token)
 
-  if (!event.requestContext.resourcePath.startsWith("/dev")) {
+  //if (!event.requestContext.resourcePath.startsWith("/dev")) {
+  if (!event.methodArn.endsWith('/dev')) {
     if (typeof token === 'undefined') return deny
     let decodedJwt = jwt.verify(token, process.env.JWT_SECRET)
 
