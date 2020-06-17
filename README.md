@@ -61,10 +61,12 @@ offline: Configuring Authorization: iot/upload/{id}/attachment AuthIoT
    │   POST   | http://localhost:3000/2015-03-31/functions/GenerateUploadUrl/invocations   │
    │                                                                                       │
    └───────────────────────────────────────────────────────────────────────────────────────┘
-   ```
+```
 
 #### 1. The application allows users to create, update, delete items - A user of the web application can use the interface to create, delete and complete an item.<br />
 <br />
+
+
 ```
 ./iotmon (first execution in automatically create device, create status and auto register the device (jwt token in iotmon.status file)
 
@@ -133,6 +135,7 @@ routeIp: 10.0.0.1
 
 #### 2. The application allows users to upload a file. - A user of the web interface can click on a "pencil" button, then select and upload a file. A file should appear in the list of items on the home page.<br />
 <br />
+
 ```
 mkdir -p /tmp/uploaded
 ./cp somefile upload/
@@ -188,18 +191,19 @@ routeIp: 10.0.0.1
 
 #### 3. The application only displays items for a logged in user. If you log out from a current user and log in as a different user, the application should not show items created by the first account. <br />
 <br />
-if we run iotmon in another machine a new uuid is generated, therefore restricting operation to that particular device.
+if we run iotmon on another machine a new uuid is generated, therefore restricting operation to that particular device.
 <br />
 #### 4. Authentication is implemented and does not allow unauthenticated access. A user needs to authenticate in order to use an application. <br />
 <br />
-Multi layer auth is implemented using encoded shared key config.dev.json:SHARED_KEY and salted brcrypt for device registering.<br />
+Multi layer auth is implemented using encoded shared key config.dev.json:SHARED_KEY and salted brcrypt for device registration.<br />
 <br />
 #### 4. The code is split into multiple layers separating business logic from I/O related code. Code of Lambda functions is split into multiple files/classes. The business logic of an application is separated from code for database access, file storage, and code related to AWS Lambda. <br />
 <br />
-- IoTAccess.ts encapsulate AWS operations and the logic is kept in the handlers due to their simplicity<br />
+- IoTAccess.ts encapsulates AWS operations and the logic is kept in the handlers due to their simplicity<br />
 <br />
-#### 4. All resources in the application are defined in the "serverless.yml" file - All resources needed by an application are defined in the "serverless.yml". A developer does not need to create them manually using AWS console.<br /><br />
-serverless-offline was extensevely used throughout the development phase <br />
+#### 4. All resources in the application are defined in the "serverless.yml" file - All resources needed by an application are defined in the "serverless.yml". A developer does not need to create them manually using AWS console.<br />
+<br />
+serverless-offline was extensevely used throughout the development phase.<br />
 <br />
 #### 5. Each function has its own set of permissions. Instead of defining all permissions under provider/iamRoleStatements, permissions are defined per function in the functions section of the "serverless.yml". <br />
 <br />
