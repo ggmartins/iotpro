@@ -6,3 +6,4 @@
 #sls plugin install --name serverless-offline
 #sls plugin install --name serverless-s3-local
 #SLS_DEBUG=* sls offline
+#sls deploy -noDeploy

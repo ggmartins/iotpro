@@ -1,14 +1,14 @@
 import 'source-map-support/register'
 import * as AWS  from 'aws-sdk'
-//import * as AWSXRay from 'aws-xray-sdk'
+import * as AWSXRay from 'aws-xray-sdk'
 import { Response } from '../models/Response'
 import { createLogger } from '../utils/logger'
 //import * as uuid from 'uuid'
 
-//const XAWS = AWSXRay.captureAWS(AWS)
+const XAWS = AWSXRay.captureAWS(AWS)
 const logger = createLogger('fileAccess')
 
-const S3_VERSION='v4'
+const VERSION='v4'
 const bucketName = process.env.S3_BUCKET_PCAP
 const urlExpiration = parseInt(process.env.SIGNED_URL_EXPIRATION)
 
@@ -17,11 +17,18 @@ export class FileAccess {
     private readonly BucketName: string = bucketName
     constructor(
         private enableLocal:boolean,
+        private enableAWSXR:boolean
         ){
             if(!this.enableLocal){
-                this.s3 = new AWS.S3({ 
-                    signatureVersion: S3_VERSION,
-                })
+                if (this.enableAWSXR){
+                    this.s3 = new XAWS.S3({ 
+                        signatureVersion: VERSION,
+                    })
+                } else {
+                    this.s3 = new AWS.S3({ 
+                        signatureVersion: VERSION,
+                    })
+                }
             } else {
                 this.s3 = new AWS.S3(process.env.IS_OFFLINE ? {
                     s3ForcePathStyle: true,

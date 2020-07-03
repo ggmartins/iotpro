@@ -1,5 +1,5 @@
 import * as AWS  from 'aws-sdk'
-//import * as AWSXRay from 'aws-xray-sdk'
+import * as AWSXRay from 'aws-xray-sdk'
 import { DocumentClient } from 'aws-sdk/clients/dynamodb'
 import { createLogger } from '../utils/logger'
 import { IotUpdate } from '../models/IotUpdate'
@@ -13,7 +13,7 @@ import bcrypt from 'bcryptjs'
 
 const bcrypt_salt = parseInt(process.env.BCRYPT_SALT)
 
-//const XAWS = AWSXRay.captureAWS(AWS)
+const XAWS = AWSXRay.captureAWS(AWS)
 const logger = createLogger('iotAccess')
 
 const devTable: string = process.env.DEV_TABLE
@@ -30,12 +30,18 @@ export class IoTAccess {
     private readonly DevTable: string = devTable
     constructor(
         private enableLocal:boolean,  
+        private enableAWSXR:boolean
         //private readonly IotIndex: string = iotIndex,      
     ){
         if(!this.enableLocal)
         {
            logger.info('Local: disable')
-           this.docClient = new AWS.DynamoDB.DocumentClient({})
+           if (this.enableAWSXR){
+              this.docClient = new XAWS.DynamoDB.DocumentClient({})
+           } else {
+              this.docClient = new AWS.DynamoDB.DocumentClient({})
+           }
+           
         }
         else 
         {

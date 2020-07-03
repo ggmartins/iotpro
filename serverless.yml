@@ -50,9 +50,14 @@ plugins:
   - serverless-offline
   - serverless-s3-local
   - serverless-dynamodb-local
+  - serverless-plugin-tracing
 provider:
   name: aws
   runtime: nodejs12.x
+  runlocal: false
+  tracing:
+    lambda: true
+    apiGateway: true
 
   stage: ${opt:stage, 'dev'}
   region: ${opt:region, 'us-east-1'}
@@ -74,7 +79,8 @@ provider:
     S3_BUCKET_PCAP: serverless-iotpcap-${self:provider.stage}
     SIGNED_URL_EXPIRATION: 300
     BCRYPT_SALT: 10
-    ENABLE_LOCAL: false
+    ENABLE_LOCAL: ${self:provider.runlocal}
+    ENABLE_AWSXR: ${self:provider.tracing.lambda}
     # this works for getting signed URL but not for uploading actually 
     #_X_AMZN_TRACE_ID: Root=1-5759e988-bd862e3fe1be46a994272793;Sampled=1
 
@@ -90,6 +96,13 @@ provider:
         - s3:PutObject
         - s3:GetObject
       Resource: arn:aws:s3:::${self:provider.environment.S3_BUCKET_PCAP}/*
+    #https://stackoverflow.com/questions/57618014/enabling-aws-xray-serverless-yml
+    - Effect: "Allow" # xray permissions (required)
+      Action:
+        - "xray:PutTraceSegments"
+        - "xray:PutTelemetryRecords"
+      Resource:
+        - "*"
 
 functions:
 
