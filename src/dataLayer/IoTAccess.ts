@@ -22,7 +22,10 @@ const idxTable: string = process.env.IOT_INDEX
 
 const sharedKey: string = process.env.SHARED_KEY
 
-const fileAccess: FileAccess = new FileAccess(process.env.ENABLE_LOCAL == 'true')
+const fileAccess: FileAccess = new FileAccess(
+    process.env.ENABLE_LOCAL == 'true',
+    process.env.ENABLE_AWSXR == 'true'
+  )
 
 export class IoTAccess {
     private readonly docClient: DocumentClient // = new AWS.DynamoDB.DocumentClient(),
