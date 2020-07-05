@@ -381,6 +381,225 @@ func getOUIMap(filePath string) map[string]string {
 	return result
 }
 
+func httpCreateDevice(config Config, iotBundle IoTBundle, password string) *http.Response {
+	client := &http.Client{}
+	var resp *http.Response
+	devAuth, err := json.Marshal(Login{Devname: iotBundle.UUID, Pssword: password})
+	if err != nil {
+		log.Fatal("error: %s\n", err)
+	}
+	u, err := url.Parse(config.URL)
+	u.Path = path.Join(u.Path, "dev")
+
+	req, err := http.NewRequest(http.MethodPost, u.String(), bytes.NewBuffer(devAuth))
+	if err != nil {
+		log.Fatal(err)
+	}
+	req.Header.Set("Key", iotBundle.UUID+"|"+iotBundle.Key+"|")
+	req.Header.Set("Content-Type", "application/json;") //;charset=utf-8
+	resp, err = client.Do(req)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("POST Device Create %#v\n", resp.Status)
+	return resp
+}
+
+func httpLoginDevice(config Config, iotBundle IoTBundle, password string) (*http.Response, string) {
+	client := &http.Client{}
+	var resp *http.Response
+	var token string
+
+	devAuth, err := json.Marshal(Login{Devname: iotBundle.UUID, Pssword: password})
+	if err != nil {
+		log.Printf("error: %s\n", err)
+	}
+	u, err := url.Parse(config.URL)
+	u.Path = path.Join(u.Path, "dev")
+	u.Path = path.Join(u.Path, "login")
+
+	req, err := http.NewRequest(http.MethodPost, u.String(), bytes.NewBuffer(devAuth))
+	if err != nil {
+		log.Fatal(err)
+	}
+	req.Header.Set("Key", iotBundle.UUID+"|"+iotBundle.Key+"|")
+	req.Header.Set("Content-Type", "application/json;") //;charset=utf-8
+	resp, err = client.Do(req)
+	if err != nil {
+		log.Fatal(err)
+	} else {
+		if resp.StatusCode == 200 {
+			var message Message
+			messagetoken := bodyToString(resp.Body)
+			log.Printf("Token: %#v %s...\"\n", resp.Status, messagetoken[:15])
+			err = json.Unmarshal([]byte(messagetoken), &message)
+			if err != nil {
+				log.Fatal(err)
+			}
+			statusfile, err := os.Create(iotstatus)
+			if err != nil {
+				log.Fatal(err)
+			}
+			token = message.Message
+			statusfile.WriteString(token)
+		} else {
+			log.Printf("Failed to login: %#v %s\n", resp.Status, bodyToString(resp.Body))
+			log.Fatal("Exiting...")
+		}
+	}
+	return resp, token
+}
+
+func httpCreateStatus(config Config, iotBundle IoTBundle, token string, jsonStatus []byte) *http.Response {
+	client := &http.Client{}
+	var resp *http.Response
+	u, err := url.Parse(config.URL)
+	u.Path = path.Join(u.Path, "iot")
+	u.Path = path.Join(u.Path, "status")
+
+	req, err := http.NewRequest(http.MethodPost, u.String(), bytes.NewBuffer(jsonStatus))
+	if err != nil {
+		log.Fatal(err)
+	}
+	req.Header.Set("Key", iotBundle.UUID+"|"+iotBundle.Key+"|"+token)
+	req.Header.Set("Content-Type", "application/json") //; charset=utf-8
+	resp, err = client.Do(req)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return resp
+}
+func httpDeleteStatus(config Config, iotBundle IoTBundle, token string, jsonStatus []byte) *http.Response {
+	client := &http.Client{}
+	var resp *http.Response
+	u, err := url.Parse(config.URL)
+	u.Path = path.Join(u.Path, "iot")
+	u.Path = path.Join(u.Path, "status")
+	u.Path = path.Join(u.Path, iotBundle.UUID)
+	token = readFile(iotstatus)
+	req, err := http.NewRequest(http.MethodDelete, u.String(), bytes.NewBuffer(jsonStatus))
+	if err != nil {
+		log.Fatal(err)
+	}
+	req.Header.Set("Key", iotBundle.UUID+"|"+iotBundle.Key+"|"+token)
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+	resp, err = client.Do(req)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return resp
+}
+
+func httpUpload(config Config, iotBundle IoTBundle, token string, file os.FileInfo) *http.Response {
+	client := &http.Client{}
+	var resp *http.Response
+	u, err := url.Parse(config.URL)
+	u.Path = path.Join(u.Path, "iot")
+	u.Path = path.Join(u.Path, "upload")
+	u.Path = path.Join(u.Path, iotBundle.UUID)
+	u.Path = path.Join(u.Path, "attachment")
+
+	req, err := http.NewRequest(http.MethodGet, u.String(), nil)
+	if err != nil {
+		panic(err)
+	}
+	req.Header.Set("Key", iotBundle.UUID+"|"+iotBundle.Key+"|"+token)
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+	resp, err = client.Do(req)
+	if err != nil {
+		panic(err)
+	}
+
+	filepath := path.Join("./upload", file.Name())
+	temppath := path.Join("/tmp/uploaded", file.Name())
+	log.Printf("GET Upload of %s %s (%#v)\n", filepath, u.Path, resp.Status)
+	decoder := json.NewDecoder(resp.Body)
+	var uploadResp Upload
+	err = decoder.Decode(&uploadResp)
+	if err != nil {
+		panic(err)
+	}
+
+	if resp.StatusCode == 200 {
+		log.Printf("URL Signed: %#v\n", uploadResp.UploadURL)
+		err = UploadFile(uploadResp.UploadURL, nil, "file", filepath)
+		if err != nil {
+			log.Fatal(err)
+		} else {
+			if !fileExists(temppath, false) {
+				err = os.Mkdir(temppath, 0755)
+				if err != nil {
+					log.Fatal(err)
+				}
+			}
+			err = os.Rename(filepath, temppath)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+	} else {
+		log.Printf("Message: %s\n", uploadResp.Message)
+	}
+	return resp
+}
+
+func httpGetStatus(config Config, iotBundle IoTBundle, token string) *http.Response {
+	client := &http.Client{}
+	var resp *http.Response
+	u, err := url.Parse(config.URL)
+	u.Path = path.Join(u.Path, "iot")
+	u.Path = path.Join(u.Path, "status")
+	u.Path = path.Join(u.Path, iotBundle.UUID)
+
+	req, err := http.NewRequest(http.MethodGet, u.String(), nil)
+	if err != nil {
+		panic(err)
+	}
+	token = readFile(iotstatus)
+
+	req.Header.Set("Key", iotBundle.UUID+"|"+iotBundle.Key+"|"+token)
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+	resp, err = client.Do(req)
+	if err != nil {
+		panic(err)
+	} else {
+		status := strings.Replace(bodyToString(resp.Body), "\\", "", -1)
+		log.Printf("GET Status %#v\n%s\n", resp.Status, status)
+	}
+	return resp
+}
+func httpUpdateStatus(config Config, iotBundle IoTBundle, token string, jsonStatus []byte) *http.Response {
+	client := &http.Client{}
+	var resp *http.Response
+	u, err := url.Parse(config.URL)
+	u.Path = path.Join(u.Path, "iot")
+	u.Path = path.Join(u.Path, "status")
+	u.Path = path.Join(u.Path, iotBundle.UUID)
+
+	req, err := http.NewRequest(http.MethodPut, u.String(), bytes.NewBuffer(jsonStatus))
+	if err != nil {
+		panic(err)
+	}
+	token = readFile(iotstatus)
+
+	req.Header.Set("Key", iotBundle.UUID+"|"+iotBundle.Key+"|"+token)
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+	resp, err = client.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	return resp
+}
+
+func bodyToString(body io.Reader) string {
+	bodyBytes, err := ioutil.ReadAll(body)
+	if err != nil {
+		log.Fatal(err)
+	}
+	bodyString := string(bodyBytes)
+	return bodyString
+}
+
 func main() {
 	//lift https://blog.golang.org/go-maps-in-action
 	log.Printf("Initializing...\n")
@@ -538,32 +757,19 @@ func main() {
 	checkUpload := false
 	if config.Status == "enable" || config.Status == "enabled" {
 		if iotstatusExist {
-			client := &http.Client{}
-			u, err := url.Parse(config.URL)
-			u.Path = path.Join(u.Path, "iot")
-			u.Path = path.Join(u.Path, "status")
-			u.Path = path.Join(u.Path, iotBundle.UUID)
-
-			req, err := http.NewRequest(http.MethodPut, u.String(), bytes.NewBuffer(jsonOut))
-			if err != nil {
-				panic(err)
-			}
-			token = readFile(iotstatus)
-
-			req.Header.Set("Key", iotBundle.UUID+"|"+iotBundle.Key+"|"+token)
-			req.Header.Set("Content-Type", "application/json; charset=utf-8")
-			resp, err = client.Do(req)
-			if err != nil {
-				panic(err)
-			} else {
+			resp = httpUpdateStatus(config, iotBundle, token, jsonOut)
+			if resp.StatusCode == 200 {
 				checkUpload = true
 				log.Printf("PUT Status %#v", resp.Status)
+			} else {
+				log.Printf("WARN: Unexpected PUT Status %d %s\n", resp.Status,
+					bodyToString(resp.Body))
 			}
 			//log.Printf("PUT Update %#v %s\n", resp.Status, bodyToString(resp.Body))
 		} else {
 			var password string
 			reader := bufio.NewReader(os.Stdin)
-			client := &http.Client{}
+
 			fmt.Printf("Creating Device:%s\nNew password:", iotBundle.UUID)
 			password1, err := reader.ReadString('\n')
 			if err != nil {
@@ -581,82 +787,16 @@ func main() {
 
 			password = base64.StdEncoding.EncodeToString([]byte(password1))
 
-			devAuth, err := json.Marshal(Login{Devname: iotBundle.UUID, Pssword: password})
-			if err != nil {
-				log.Fatal("error: %s\n", err)
-			}
-			u, err := url.Parse(config.URL)
-			u.Path = path.Join(u.Path, "dev")
+			resp = httpCreateDevice(config, iotBundle, password)
 
-			req, err := http.NewRequest(http.MethodPost, u.String(), bytes.NewBuffer(devAuth))
-			if err != nil {
-				log.Fatal(err)
-			}
-			req.Header.Set("Key", iotBundle.UUID+"|"+iotBundle.Key+"|")
-			req.Header.Set("Content-Type", "application/json;") //;charset=utf-8
-			resp, err = client.Do(req)
-			if err != nil {
-				log.Fatal(err)
-			}
-			log.Printf("POST Device Create %#v\n", resp.Status)
 			if resp.StatusCode == 201 {
-				devAuth, err := json.Marshal(Login{Devname: iotBundle.UUID, Pssword: password})
-				if err != nil {
-					log.Printf("error: %s\n", err)
-				}
-				u, err := url.Parse(config.URL)
-				u.Path = path.Join(u.Path, "dev")
-				u.Path = path.Join(u.Path, "login")
-
-				req, err := http.NewRequest(http.MethodPost, u.String(), bytes.NewBuffer(devAuth))
-				if err != nil {
-					log.Fatal(err)
-				}
-				req.Header.Set("Key", iotBundle.UUID+"|"+iotBundle.Key+"|")
-				req.Header.Set("Content-Type", "application/json;") //;charset=utf-8
-				resp, err = client.Do(req)
-				if err != nil {
-					log.Fatal(err)
-				} else {
-					if resp.StatusCode == 200 {
-						var message Message
-						messagetoken := bodyToString(resp.Body)
-						log.Printf("Token: %#v %s...\"\n", resp.Status, messagetoken[:15])
-						err = json.Unmarshal([]byte(messagetoken), &message)
-						if err != nil {
-							log.Fatal(err)
-						}
-						statusfile, err := os.Create(iotstatus)
-						if err != nil {
-							log.Fatal(err)
-						}
-						token = message.Message
-						statusfile.WriteString(token)
-					} else {
-						log.Printf("Failed to login: %#v %s\n", resp.Status, bodyToString(resp.Body))
-						log.Fatal("Exiting...")
-					}
-				}
+				resp, token = httpLoginDevice(config, iotBundle, password)
 			} else {
 				log.Printf("Error: %s\n", bodyToString(resp.Body))
 				log.Fatal("Exiting...")
 			}
 
-			u, err = url.Parse(config.URL)
-			u.Path = path.Join(u.Path, "iot")
-			u.Path = path.Join(u.Path, "status")
-
-			req, err = http.NewRequest(http.MethodPost, u.String(), bytes.NewBuffer(jsonOut))
-			if err != nil {
-				log.Fatal(err)
-			}
-			req.Header.Set("Key", iotBundle.UUID+"|"+iotBundle.Key+"|"+token)
-			req.Header.Set("Content-Type", "application/json") //; charset=utf-8
-			resp, err = client.Do(req)
-			if err != nil {
-				log.Fatal(err)
-			}
-
+			resp = httpCreateStatus(config, iotBundle, token, jsonOut)
 			if resp.StatusCode == 201 {
 				log.Printf("POST Status Created. %#v\n", resp.Status)
 			} else {
@@ -666,22 +806,8 @@ func main() {
 		}
 	} else {
 		if iotstatusExist {
-			client := &http.Client{}
-			u, err := url.Parse(config.URL)
-			u.Path = path.Join(u.Path, "iot")
-			u.Path = path.Join(u.Path, "status")
-			u.Path = path.Join(u.Path, iotBundle.UUID)
-			token = readFile(iotstatus)
-			req, err := http.NewRequest(http.MethodDelete, u.String(), bytes.NewBuffer(jsonOut))
-			if err != nil {
-				log.Fatal(err)
-			}
-			req.Header.Set("Key", iotBundle.UUID+"|"+iotBundle.Key+"|"+token)
-			req.Header.Set("Content-Type", "application/json; charset=utf-8")
-			resp, err = client.Do(req)
-			if err != nil {
-				log.Fatal(err)
-			}
+
+			resp = httpDeleteStatus(config, iotBundle, token, jsonOut)
 
 			log.Printf("DEL Delete %#v %s\n", resp.Status, bodyToString(resp.Body))
 			os.Remove(iotstatus) //disable request by removing status ("flag") file
@@ -702,85 +828,9 @@ func main() {
 			if file.Name() == ".placeholder" {
 				continue
 			}
-			client := &http.Client{}
-			u, err := url.Parse(config.URL)
-			u.Path = path.Join(u.Path, "iot")
-			u.Path = path.Join(u.Path, "upload")
-			u.Path = path.Join(u.Path, iotBundle.UUID)
-			u.Path = path.Join(u.Path, "attachment")
-
-			req, err := http.NewRequest(http.MethodGet, u.String(), nil)
-			if err != nil {
-				panic(err)
-			}
-			req.Header.Set("Key", iotBundle.UUID+"|"+iotBundle.Key+"|"+token)
-			req.Header.Set("Content-Type", "application/json; charset=utf-8")
-			resp, err = client.Do(req)
-			if err != nil {
-				panic(err)
-			}
-
-			filepath := path.Join("./upload", file.Name())
-			temppath := path.Join("/tmp/uploaded", file.Name())
-			log.Printf("GET Upload of %s %s (%#v)\n", filepath, u.Path, resp.Status)
-			decoder := json.NewDecoder(resp.Body)
-			var uploadResp Upload
-			err = decoder.Decode(&uploadResp)
-			if err != nil {
-				panic(err)
-			}
-
-			if resp.StatusCode == 200 {
-				log.Printf("URL Signed: %#v\n", uploadResp.UploadURL)
-				err = UploadFile(uploadResp.UploadURL, nil, "file", filepath)
-				if err != nil {
-					log.Fatal(err)
-				} else {
-					if !fileExists(temppath, false) {
-						err = os.Mkdir(temppath, 0755)
-						if err != nil {
-							log.Fatal(err)
-						}
-					}
-					err = os.Rename(filepath, temppath)
-					if err != nil {
-						log.Fatal(err)
-					}
-				}
-			} else {
-				log.Printf("Message: %s\n", uploadResp.Message)
-			}
+			resp = httpUpload(config, iotBundle, token, file)
 		}
 	} //checkUpload
 
-	client := &http.Client{}
-	u, err := url.Parse(config.URL)
-	u.Path = path.Join(u.Path, "iot")
-	u.Path = path.Join(u.Path, "status")
-	u.Path = path.Join(u.Path, iotBundle.UUID)
-
-	req, err := http.NewRequest(http.MethodGet, u.String(), nil)
-	if err != nil {
-		panic(err)
-	}
-	token = readFile(iotstatus)
-
-	req.Header.Set("Key", iotBundle.UUID+"|"+iotBundle.Key+"|"+token)
-	req.Header.Set("Content-Type", "application/json; charset=utf-8")
-	resp, err = client.Do(req)
-	if err != nil {
-		panic(err)
-	} else {
-		status := strings.Replace(bodyToString(resp.Body), "\\", "", -1)
-		log.Printf("GET Status %#v\n%s\n", resp.Status, status)
-	}
-}
-
-func bodyToString(body io.Reader) string {
-	bodyBytes, err := ioutil.ReadAll(body)
-	if err != nil {
-		log.Fatal(err)
-	}
-	bodyString := string(bodyBytes)
-	return bodyString
+	resp = httpGetStatus(config, iotBundle, token)
 }
